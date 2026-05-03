@@ -66,7 +66,14 @@ public class LauncherView
                 var newSize = vp.GetVisibleRect().Size;
                 parent.Size = newSize;
                 _panel.UpdateSizeFromViewport(newSize);
-                _panelBaseY = _panel.Position.Y;
+                // Don't recapture _panelBaseY here. The virtual keyboard appearing
+                // also fires SizeChanged (viewport shrinks for the keyboard), and
+                // by the time we run, UpdateKeyboardOffset has already moved
+                // _panel.Position.Y up by the offset. Capturing now would lock the
+                // base at the offset-up position, leaving the panel stuck high
+                // after the keyboard dismisses. The panel is a FullRect-anchored
+                // CenterContainer so its natural position stays (0,0) regardless
+                // of viewport size — the initial capture is enough.
                 PatchHelper.Log(
                     $"[Launcher] Viewport SizeChanged -> {newSize}; panel resized"
                 );
