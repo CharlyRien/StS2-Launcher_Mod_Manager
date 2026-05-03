@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Godot;
+using STS2Mobile.Debug;
 using STS2Mobile.Launcher.Components;
 using STS2Mobile.Patches;
 using STS2Mobile.Steam;
@@ -124,6 +125,8 @@ public class LauncherController
         _view.Actions.CheckLauncherUpdatePressed += OnCheckLauncherUpdatePressed;
         _view.ModManagerButton.Pressed += OnModManagerPressed;
         _view.ModManager.BackPressed += OnModManagerBackPressed;
+        _view.DebugButton.Pressed += OnDebugTogglePressed;
+        UpdateDebugButtonLabel();
 
         var localBackupPref = LauncherModel.LoadLocalBackupPref();
         _view.Actions.SetLocalBackupChecked(localBackupPref);
@@ -689,6 +692,41 @@ public class LauncherController
         });
         return tcs.Task;
     }
+
+    private void OnDebugTogglePressed()
+    {
+        if (DebugLogger.IsEnabled())
+        {
+            var path = DebugLogger.GetCurrentFilePath() ?? DebugLogger.GetLogsDirPath();
+            _view.ShowConfirmation(
+                $"Debug logging is ON.\n\nCurrent log file:\n{path}\n\nTurn off?",
+                onConfirmed: () =>
+                {
+                    DebugLogger.Disable();
+                    UpdateDebugButtonLabel();
+                    _view.AppendLog("Debug logging disabled.");
+                },
+                onCancelled: null
+            );
+        }
+        else
+        {
+            var dir = DebugLogger.GetLogsDirPath();
+            _view.ShowConfirmation(
+                $"Turn debug logging on?\n\nLogs will be written under:\n{dir}\n\nFor full launch-to-gameplay logs, restart the app after enabling.",
+                onConfirmed: () =>
+                {
+                    var path = DebugLogger.Enable();
+                    UpdateDebugButtonLabel();
+                    _view.AppendLog($"Debug logging enabled → {path ?? "(failed to start)"}");
+                },
+                onCancelled: null
+            );
+        }
+    }
+
+    private void UpdateDebugButtonLabel() =>
+        _view.DebugButton.Text = DebugLogger.IsEnabled() ? "Debug: ON" : "Debug: OFF";
 
     private void OnLocalBackupToggled(bool pressed)
     {

@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -18,15 +19,22 @@ import androidx.core.splashscreen.SplashScreen;
 
 import android.content.SharedPreferences;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.security.KeyStore;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -62,6 +70,16 @@ public class GodotApp extends GodotActivity {
 	private final java.util.List<String> lastPickedZipPaths =
 			java.util.Collections.synchronizedList(new java.util.ArrayList<>());
 
+	private Process logcatProcess;
+	private Thread logcatThread;
+	private File logcatFile;
+	private static final String DEBUG_LOGCAT_PREF = "debug_logcat_enabled";
+	private static final String EXTERNAL_LOGS_SUBDIR = "StS2LauncherMM/Logs";
+	// Default ON so users hitting boot crashes still produce a log; toggle off
+	// in-app to opt out. See LauncherController.OnDebugTogglePressed.
+	private static final boolean DEBUG_LOGCAT_DEFAULT = true;
+	private static final int MAX_LOG_FILES = 20;
+
 	private final Runnable updateWindowAppearance = () -> {
 		Godot godot = getGodot();
 		if (godot != null) {
@@ -75,6 +93,13 @@ public class GodotApp extends GodotActivity {
 	public void onCreate(Bundle savedInstanceState) {
 		instance = this;
 		gameDir = new File(getFilesDir(), "game").getAbsolutePath();
+
+		// Start logcat capture as early as possible if the user previously enabled
+		// debug logging — the goal is to capture from the very first init logs
+		// (FMOD, BCL extraction, .NET boot) right through to gameplay.
+		if (isLogcatCaptureEnabled()) {
+			startLogcatCaptureInternal();
+		}
 
 		SplashScreen.installSplashScreen(this);
 		EdgeToEdge.enable(this);
@@ -599,6 +624,136 @@ public class GodotApp extends GodotActivity {
 		} catch (Exception e) {
 			Log.e(TAG, "installApk failed for " + apkPath, e);
 		}
+	}
+
+	// === Debug logcat capture ===
+	//
+	// When enabled, spawn a logcat process scoped to our own PID (--pid) so no
+	// READ_LOGS permission is needed, and stream every line to a timestamped
+	// file under /storage/emulated/0/StS2LauncherMM/Logs/. The toggle persists
+	// in SharedPreferences so the next launch can re-attach the capture from
+	// onCreate, before any of our patches or the .NET runtime even boot — that
+	// way the user can collect a complete launch-to-gameplay log just by
+	// turning Debug on, force-stopping the app, and relaunching.
+
+	public boolean isLogcatCaptureEnabled() {
+		return getSharedPreferences("sts2mobile", MODE_PRIVATE)
+				.getBoolean(DEBUG_LOGCAT_PREF, DEBUG_LOGCAT_DEFAULT);
+	}
+
+	public String startLogcatCapture() {
+		getSharedPreferences("sts2mobile", MODE_PRIVATE).edit()
+				.putBoolean(DEBUG_LOGCAT_PREF, true).apply();
+		return startLogcatCaptureInternal();
+	}
+
+	public void stopLogcatCapture() {
+		getSharedPreferences("sts2mobile", MODE_PRIVATE).edit()
+				.putBoolean(DEBUG_LOGCAT_PREF, false).apply();
+		stopLogcatCaptureInternal();
+	}
+
+	public String getLogcatFilePath() {
+		return logcatFile != null ? logcatFile.getAbsolutePath() : null;
+	}
+
+	public String getLogcatLogsDirPath() {
+		File logsDir = new File(Environment.getExternalStorageDirectory(), EXTERNAL_LOGS_SUBDIR);
+		return logsDir.getAbsolutePath();
+	}
+
+	private synchronized String startLogcatCaptureInternal() {
+		if (logcatProcess != null) {
+			Log.i(TAG, "[Debug] Logcat capture already running -> " + logcatFile);
+			return logcatFile != null ? logcatFile.getAbsolutePath() : null;
+		}
+
+		try {
+			File logsDir = new File(Environment.getExternalStorageDirectory(), EXTERNAL_LOGS_SUBDIR);
+			if (!logsDir.exists() && !logsDir.mkdirs()) {
+				Log.e(TAG, "[Debug] Failed to create logs dir: " + logsDir.getAbsolutePath());
+				return null;
+			}
+
+			pruneOldLogFiles(logsDir);
+
+			String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
+			logcatFile = new File(logsDir, "launcher_" + timestamp + ".log");
+
+			int pid = android.os.Process.myPid();
+			ProcessBuilder pb = new ProcessBuilder(
+					"logcat", "-v", "time", "--pid", String.valueOf(pid));
+			pb.redirectErrorStream(true);
+			logcatProcess = pb.start();
+
+			final Process proc = logcatProcess;
+			final File outFile = logcatFile;
+			logcatThread = new Thread(() -> {
+				try (BufferedReader reader = new BufferedReader(
+						new InputStreamReader(proc.getInputStream()));
+						BufferedWriter writer = new BufferedWriter(
+								new FileWriter(outFile, true))) {
+					writer.write("=== Logcat capture started for PID " + pid + " ===\n");
+					writer.flush();
+					String line;
+					while ((line = reader.readLine()) != null) {
+						writer.write(line);
+						writer.write('\n');
+						writer.flush();
+					}
+				} catch (IOException e) {
+					Log.w(TAG, "[Debug] Logcat capture stream ended: " + e.getMessage());
+				}
+			}, "sts2-logcat-capture");
+			logcatThread.setDaemon(true);
+			logcatThread.start();
+
+			Log.i(TAG, "[Debug] Logcat capture started -> " + logcatFile.getAbsolutePath());
+			return logcatFile.getAbsolutePath();
+		} catch (Exception e) {
+			Log.e(TAG, "[Debug] Failed to start logcat capture", e);
+			logcatProcess = null;
+			logcatFile = null;
+			return null;
+		}
+	}
+
+	// Keep at most MAX_LOG_FILES launcher_*.log files in the logs dir; delete the
+	// oldest by lastModified() until we're under the cap. Runs cheaply once per
+	// capture start, so a never-cleaned-up history can't grow unbounded.
+	private void pruneOldLogFiles(File logsDir) {
+		try {
+			File[] files = logsDir.listFiles((dir, name) ->
+					name.startsWith("launcher_") && name.endsWith(".log"));
+			if (files == null || files.length < MAX_LOG_FILES) return;
+
+			java.util.Arrays.sort(files, (a, b) ->
+					Long.compare(a.lastModified(), b.lastModified()));
+			int toDelete = files.length - (MAX_LOG_FILES - 1);
+			for (int i = 0; i < toDelete; i++) {
+				if (files[i].delete()) {
+					Log.i(TAG, "[Debug] Pruned old log: " + files[i].getName());
+				}
+			}
+		} catch (Exception e) {
+			Log.w(TAG, "[Debug] Log prune failed: " + e.getMessage());
+		}
+	}
+
+	private synchronized void stopLogcatCaptureInternal() {
+		if (logcatProcess != null) {
+			try {
+				logcatProcess.destroy();
+			} catch (Exception ignored) { }
+			logcatProcess = null;
+		}
+		if (logcatThread != null) {
+			try {
+				logcatThread.interrupt();
+			} catch (Exception ignored) { }
+			logcatThread = null;
+		}
+		Log.i(TAG, "[Debug] Logcat capture stopped");
 	}
 
 	public void deleteKeystoreKey() {

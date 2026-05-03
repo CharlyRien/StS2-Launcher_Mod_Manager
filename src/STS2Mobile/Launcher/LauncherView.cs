@@ -18,6 +18,7 @@ public class LauncherView
     public ModManagerSection ModManager { get; }
     public StyledButton ModManagerButton { get; }
     public LogView Log { get; }
+    public StyledButton DebugButton { get; }
 
     private readonly StyledLabel _statusLabel;
     private readonly Control _parent;
@@ -45,10 +46,20 @@ public class LauncherView
         _panel.Panel.GuiInput += DismissKeyboard;
         parent.AddChild(_panel);
         _panelBaseY = _panel.Position.Y;
-        // Window-level ContentScale (set in LauncherUI.Initialize) auto-stretches
-        // logical 1920×1080 to the physical viewport, so manual reflow on
-        // Viewport.SizeChanged is no longer needed — fold/unfold/rotate just
-        // works out of the box.
+
+        // Widget scale stays fixed (Window ContentScale handles physical mapping),
+        // but the logical visible rect extends along the wider axis under
+        // ContentScaleAspect.Expand. Without recomputing the panel min-size, it
+        // stays centered at its original 1824×994 logical with black bars on
+        // any axis that grew (most visible after a foldable hinge transition).
+        var vp = parent.GetViewport();
+        if (vp != null)
+            vp.SizeChanged += () =>
+            {
+                var newSize = vp.GetVisibleRect().Size;
+                _panel.UpdateSizeFromViewport(newSize);
+                _panelBaseY = _panel.Position.Y;
+            };
 
         var hbox = new HBoxContainer();
         hbox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -122,9 +133,18 @@ public class LauncherView
         right.SizeFlagsStretchRatio = 4f;
         hbox.AddChild(right);
 
+        var logHeader = new HBoxContainer();
+        logHeader.AddThemeConstantOverride("separation", (int)(8 * scale));
+        right.AddChild(logHeader);
+
         var logTitle = new StyledLabel("Console", scale, fontSize: 14);
         logTitle.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.65f));
-        right.AddChild(logTitle);
+        logTitle.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        logHeader.AddChild(logTitle);
+
+        DebugButton = new StyledButton("Debug: OFF", scale, fontSize: 11, height: 28);
+        DebugButton.CustomMinimumSize = new Vector2((int)(110 * scale), DebugButton.CustomMinimumSize.Y);
+        logHeader.AddChild(DebugButton);
 
         Log = new LogView(scale);
         Log.SizeFlagsVertical = Control.SizeFlags.ExpandFill;

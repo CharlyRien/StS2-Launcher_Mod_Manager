@@ -15,6 +15,7 @@ public static class AppPaths
     public const string ExternalRoot = "/storage/emulated/0/StS2LauncherMM";
     public const string ExternalModsDir = ExternalRoot + "/Mods";
     public const string ExternalSaveBackupsDir = ExternalRoot + "/Saves";
+    public const string ExternalLogsDir = ExternalRoot + "/Logs";
     public const string ExternalModConfigFile = ExternalModsDir + "/mod_config.json";
 
     // Returns true if the app has permission to write to shared external storage.
@@ -62,6 +63,11 @@ public static class AppPaths
         try
         {
             Directory.CreateDirectory(ExternalSaveBackupsDir);
+        }
+        catch { }
+        try
+        {
+            Directory.CreateDirectory(ExternalLogsDir);
         }
         catch { }
     }
