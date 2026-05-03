@@ -8,6 +8,41 @@ An Android launcher for Slay the Spire 2, built on a custom Godot 4.5.1 engine w
 
 > **사용설명서 (한국어)**: 처음 설치하는 사용자를 위한 단계별 가이드는 [docs/USER_GUIDE.md](docs/USER_GUIDE.md) 참조.
 
+## Fork changes (v0.3.11)
+
+Versioned as **0.3.11 (versionCode 254)**. Drop-in upgrade from 0.3.x — saves and credentials carry over. Headlines issue #12 (launcher self-update flow) and adds opt-out diagnostic logging for issue #11. 0.3.4 through 0.3.10 were intermediate test releases; this is the first formal release that consolidates them.
+
+### What's fixed / added
+
+1. **Launcher self-update flow (issue #12).** The single `CHECK FOR UPDATES` button used to run game-manifest comparison and launcher-APK comparison in parallel but only surfaced the game result; the launcher result was logged as one yellow line that users never noticed. The launcher comparison was also pointed at the upstream `Ekyso/StS2-Launcher` repo, so this fork's `v0.3.x` releases were never matched. Net effect: the feature was a noop. This release:
+   - Splits the button into `CHECK GAME UPDATE` / `CHECK LAUNCHER UPDATE` — independent flows, independent busy state, independent result UI.
+   - Repoints the launcher comparison at `iunius612/StS2-Launcher_Mod_Manager`'s latest release.
+   - Fixes a version-comparison bug where `release.name = "v0.3.3 — BaseLib v3.x mobile..."` dot-split failed to parse and silently treated current as latest. Now uses `tag_name` and extracts only the leading numeric/dot prefix.
+   - Adds an automatic launcher-update check on boot, surfacing a dialog only when a newer version exists.
+   - Adds an in-app download + install flow: dialog confirm → `HttpClient` stream APK to cache (with progress) → `Intent.ACTION_VIEW` to the system installer. Falls back to opening the GitHub release page if no APK asset is attached. Walks the user to system settings if "install from this source" is off.
+   - Pressing `CHECK LAUNCHER UPDATE` while already up to date now surfaces a dialog instead of silently no-op'ing.
+
+2. **Device/render diagnostic logging (issue #11).** A user reported horizontal tear striping in the black background area when running fullscreen single-window on a Galaxy Z Fold6 (`SM-F956N`, unfolded native 2160×1856 ≈ 1.164:1). Reproduces on the upstream Ekyso launcher too, and disappears in split-screen or with the in-game letterbox setting — so the trigger is a Vulkan/SurfaceFlinger swapchain interaction with the Fold6's non-standard aspect, not anything in our patches. The dev test device (Fold7, 1.109:1, even more square) does **not** reproduce, which rules out aspect ratio as the sole cause and points at the Fold6 GPU driver / OneUI 6.1 firmware. Without dev-side reproduction, this release adds opt-out diagnostic logging that the reporter can turn on (Debug toggle is default ON, so logs are auto-captured to `/storage/emulated/0/StS2LauncherMM/Logs/`):
+   - `RenderDiagnosticPatches` writes a one-shot boot record (OS / model / video adapter name+vendor+API version / project rendering method / screen physical size, DPI, refresh rate) and a `Window.SizeChanged` record (window size, visible rect, ContentScaleSize/mode/aspect, ratio) every time the user folds, unfolds, rotates, or enters/leaves split-screen.
+   - `GodotApp.onCreate` adds a one-line `Build.MANUFACTURER / MODEL / Android version / firmware build ID` log so the same diagnostic can split firmware revisions on the same hardware.
+   - All logs are tagged `[Diag/Fold]`. Both events are low-frequency (boot once, plus user-driven fold/rotate transitions) and the log path is asynchronous (`Console.Error.WriteLine` → logcat pipe), so this has no FPS impact.
+
+### Cumulative fixes from 0.3.4 — 0.3.10
+
+These shipped as test releases while issue #12 was being verified on devices and follow-up regressions were caught:
+
+- **Screen auto-rotation (sensorLandscape).** `android:screenOrientation` flipped from `landscape` → `sensorLandscape`, with `DisplayServer.ScreenSetOrientation(SensorLandscape)` from C# at launcher init to override the game PCK's `display/window/handheld/orientation` setting (which Godot applies at runtime and silently overrides the manifest). Lets users flip the device 180° (e.g. for USB-C charging-cable position) and have the screen follow.
+- **Wide-display layout.** Removed launcher-panel hard caps (`MaxWidth=1400`, `MaxHeight=800`) and switched font/padding scale from `Math.Max(vpX, vpY)` to `Math.Min(vpX, vpY)` so panels fill 21:9-class screens (e.g. Fold7 unfolded 2520×1080) without large black margins, and widget heights track the shorter axis. Subscribed to viewport `SizeChanged` so panels reflow on `sensorLandscape` rotation, fold/unfold, and multi-window resize.
+- **Pinned Window content scale.** `ContentScaleSize=(1920,1080)` + `CanvasItems` + `Expand` so widget scale is computed from a stable logical canvas instead of the visible rect (which `Expand` warps along the wider physical axis on fold/unfold and previously gave wildly different scales per posture).
+- **Storage permission re-prompt loop.** If the user denies "All files access" the launcher now keeps re-prompting on subsequent launches instead of falling through to a silent broken state. Log view also switched from 7:3 to 5:5 split so logs are readable while the user resolves the permission dialog.
+- **Keyboard offset stuck regression fix (0.3.10).** With the 0.3.8 `Viewport.SizeChanged` hook plus the existing `_panelBaseY` capture, virtual-keyboard activation could write the already-shifted panel position as the new base — closing the keyboard then "restored" to the shifted position and the panel stayed glued to the top. Drop the `_panelBaseY = _panel.Position.Y` re-capture inside the size-change hook; the panel's natural position is FullRect-anchored (0,0), so a single capture at construction is correct.
+- **Debug logcat toggle.** Persistent toggle (default ON), captured to `StS2LauncherMM/Logs/` with auto-rotation (max 20 files). Lets users attach logs to issues without `adb`.
+
+### Permission / config changes (cumulative since 0.3.3)
+
+- New permission `REQUEST_INSTALL_PACKAGES` added in 0.3.4 for the in-app installer flow. First self-update attempt walks the user through the system "install from this source" toggle (Android 8+).
+- 0.3.4 also overrides the Godot library's `FileProvider` paths xml (`godot_provider_paths.xml`) to add a `<cache-path>` entry — used to hand the downloaded APK to the system installer via a content URI.
+
 ## Fork changes (v0.3.3)
 
 Versioned as **0.3.3 (versionCode 241)**. Drop-in upgrade from 0.3.x — saves and credentials carry over. Targets issue #8 (BaseLib v3.x crashes the game on PatchAll) and issue #9 (Android `release_info` not loaded → main-menu `????` build label + LAN multiplayer version mismatch).
