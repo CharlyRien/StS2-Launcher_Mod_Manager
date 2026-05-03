@@ -19,6 +19,9 @@
     android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
     tools:ignore="ScopedStorage"
   />
+  <!-- In-app launcher self-update (issue #12). Per-source "install unknown apps"
+       toggle is gated by the user in system settings on Android 8+. -->
+  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
   <supports-screens
     android:smallScreens="true"
@@ -48,7 +51,7 @@
       android:launchMode="singleInstancePerTask"
       android:excludeFromRecents="false"
       android:exported="true"
-      android:screenOrientation="landscape"
+      android:screenOrientation="sensorLandscape"
       android:windowSoftInputMode="adjustResize"
       android:configChanges="layoutDirection|locale|orientation|keyboardHidden|screenSize|smallestScreenSize|density|keyboard|navigation|screenLayout|uiMode"
       android:resizeableActivity="true"
@@ -61,4 +64,8 @@
       </intent-filter>
     </activity>
   </application>
+  <!-- The Godot library AAR already declares FileProvider with authority
+       ${applicationId}.fileprovider and meta-data resource @xml/godot_provider_paths.
+       Issue #12 reuses that provider but overrides the paths xml in res/xml/ to
+       add a <cache-path> entry for the downloaded launcher APK. -->
 </manifest>

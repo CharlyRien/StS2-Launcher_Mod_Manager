@@ -18,6 +18,7 @@ public class LauncherView
     public ModManagerSection ModManager { get; }
     public StyledButton ModManagerButton { get; }
     public LogView Log { get; }
+    public StyledButton DebugButton { get; }
 
     private readonly StyledLabel _statusLabel;
     private readonly Control _parent;
@@ -40,11 +41,43 @@ public class LauncherView
         bg.GuiInput += DismissKeyboard;
         parent.AddChild(bg);
 
-        _panel = new StyledPanel(scale, widthRatio: 0.9f);
+        _panel = new StyledPanel(scale, widthRatio: 0.95f, heightRatio: 0.92f);
         _panel.UpdateSizeFromViewport(vpSize);
         _panel.Panel.GuiInput += DismissKeyboard;
         parent.AddChild(_panel);
         _panelBaseY = _panel.Position.Y;
+
+        // Widget scale stays fixed (Window ContentScale handles physical mapping),
+        // but the logical visible rect extends along the wider axis under
+        // ContentScaleAspect.Expand. Without recomputing the panel min-size, it
+        // stays centered at its original 1824×994 logical with black bars on
+        // any axis that grew (most visible after a foldable hinge transition).
+        // The parent.Size update is essential — LauncherUI's parent in the
+        // running game is `gameNode` (a Node, not a Control), so anchors don't
+        // drive auto-sizing. Without setting Size, every child sees a stale
+        // size from the previous viewport and the panel snaps to the corner.
+        // (parent.Size update was present in v0.3.5, dropped in v0.3.6 along
+        // with the hook itself, hook re-added in v0.3.6 but missing this line —
+        // restored in v0.3.8.)
+        var vp = parent.GetViewport();
+        if (vp != null)
+            vp.SizeChanged += () =>
+            {
+                var newSize = vp.GetVisibleRect().Size;
+                parent.Size = newSize;
+                _panel.UpdateSizeFromViewport(newSize);
+                // Don't recapture _panelBaseY here. The virtual keyboard appearing
+                // also fires SizeChanged (viewport shrinks for the keyboard), and
+                // by the time we run, UpdateKeyboardOffset has already moved
+                // _panel.Position.Y up by the offset. Capturing now would lock the
+                // base at the offset-up position, leaving the panel stuck high
+                // after the keyboard dismisses. The panel is a FullRect-anchored
+                // CenterContainer so its natural position stays (0,0) regardless
+                // of viewport size — the initial capture is enough.
+                PatchHelper.Log(
+                    $"[Launcher] Viewport SizeChanged -> {newSize}; panel resized"
+                );
+            };
 
         var hbox = new HBoxContainer();
         hbox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -115,12 +148,21 @@ public class LauncherView
 
         var right = new VBoxContainer();
         right.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        right.SizeFlagsStretchRatio = 4f;
+        right.SizeFlagsStretchRatio = 1f;
         hbox.AddChild(right);
+
+        var logHeader = new HBoxContainer();
+        logHeader.AddThemeConstantOverride("separation", (int)(8 * scale));
+        right.AddChild(logHeader);
 
         var logTitle = new StyledLabel("Console", scale, fontSize: 14);
         logTitle.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.65f));
-        right.AddChild(logTitle);
+        logTitle.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        logHeader.AddChild(logTitle);
+
+        DebugButton = new StyledButton("Debug: OFF", scale, fontSize: 11, height: 28);
+        DebugButton.CustomMinimumSize = new Vector2((int)(110 * scale), DebugButton.CustomMinimumSize.Y);
+        logHeader.AddChild(DebugButton);
 
         Log = new LogView(scale);
         Log.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
@@ -208,6 +250,13 @@ public class LauncherView
         if (onCancelled != null)
             dialog.Cancelled += onCancelled;
         _parent.AddChild(dialog);
+    }
+
+    public LauncherUpdateDialog ShowLauncherUpdateDialog(string version)
+    {
+        var dialog = new LauncherUpdateDialog(version, _scale);
+        _parent.AddChild(dialog);
+        return dialog;
     }
 
     public void ShowBranchPicker(

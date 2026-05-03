@@ -15,17 +15,82 @@ public class LauncherUI : Control
     private LauncherView _view;
     private LauncherController _controller;
     private bool _inGameMode;
+    private bool _windowScaleOverridden;
+    private Vector2I _origScaleSize;
+    private Window.ContentScaleModeEnum _origScaleMode;
+    private Window.ContentScaleAspectEnum _origScaleAspect;
+
+    // Logical canvas the launcher targets. Window.ContentScale is pinned to
+    // these dims with CanvasItems + Expand, so widget scale is computed from
+    // the base size (always 2.0) instead of from the visible rect — the visible
+    // rect grows along the wider physical axis under Expand and would otherwise
+    // give a wildly different scale on fold/unfold/rotate.
+    public const int LogicalWidth = 1920;
+    public const int LogicalHeight = 1080;
+    public const float UiScale = LogicalHeight / 540f; // 2.0
 
     public void Initialize()
     {
         ZIndex = 100;
 
+        // The game PCK's project.godot pins display/window/handheld/orientation to
+        // landscape, which Godot applies at runtime and silently overrides the
+        // activity's android:screenOrientation="sensorLandscape". Force sensor
+        // landscape from C# so the user can flip the device 180° (USB-C charging
+        // angle) and have the screen rotate.
         try
         {
-            var vpSize = GetViewport()?.GetVisibleRect().Size ?? new Vector2(1920, 1080);
+            DisplayServer.ScreenSetOrientation(DisplayServer.ScreenOrientation.SensorLandscape);
+        }
+        catch (Exception ex)
+        {
+            PatchHelper.Log($"[Launcher] Failed to set sensor landscape: {ex.Message}");
+        }
+
+        // Pin Window content scale to a fixed logical 1920×1080 with canvas_items +
+        // expand. Godot then auto-stretches the entire UI tree to whatever physical
+        // viewport the foldable / rotation / window resize produces, so widget
+        // sizes computed once at construction (font, button height, padding) keep
+        // looking right after fold/unfold without rebuilding the tree.
+        // Original game-set values are stashed and restored in OnExitTree.
+        try
+        {
+            var window = GetWindow();
+            if (window != null)
+            {
+                _origScaleSize = window.ContentScaleSize;
+                _origScaleMode = window.ContentScaleMode;
+                _origScaleAspect = window.ContentScaleAspect;
+                window.ContentScaleSize = new Vector2I(1920, 1080);
+                window.ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
+                window.ContentScaleAspect = Window.ContentScaleAspectEnum.Expand;
+                _windowScaleOverridden = true;
+                PatchHelper.Log(
+                    $"[Launcher] Window ContentScale overridden (orig size={_origScaleSize}, mode={_origScaleMode}, aspect={_origScaleAspect})"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            PatchHelper.Log($"[Launcher] Failed to set Window ContentScale: {ex.Message}");
+        }
+
+        try
+        {
+            // ContentScaleAspect.Expand makes GetVisibleRect grow along whatever
+            // physical axis exceeds the project aspect, so don't compute scale
+            // from it (would give different values on fold/unfold/rotate). Use
+            // the base logical size — scale stays a stable 2.0.
+            var vpSize = GetViewport()?.GetVisibleRect().Size ?? new Vector2(LogicalWidth, LogicalHeight);
             SetAnchorsPreset(LayoutPreset.FullRect);
+            // Required because LauncherUI's parent is the game's gameNode (a
+            // plain Node, not a Control), so anchors don't drive auto-sizing —
+            // we have to set Size explicitly. Without this, every child Control
+            // sees a 0×0 parent and the launcher collapses into the corner.
+            // (Removed in v0.3.7, restored in v0.3.8 — that removal was the
+            // observed top-left-collapse regression.)
             Size = vpSize;
-            var scale = Math.Max(vpSize.X, vpSize.Y) / 960f;
+            var scale = UiScale;
 
             _model = new LauncherModel(OS.GetDataDir());
             _model.InGameMode = _inGameMode;
@@ -58,15 +123,10 @@ public class LauncherUI : Control
     // overlays (e.g. cloud conflict dialog) match the rest of the UI sizing.
     public static float ResolveScale(Node sceneRef)
     {
-        try
-        {
-            var vpSize = sceneRef?.GetViewport()?.GetVisibleRect().Size ?? new Vector2(1920, 1080);
-            return Math.Max(vpSize.X, vpSize.Y) / 960f;
-        }
-        catch
-        {
-            return 2.0f;
-        }
+        // Pinned scale matches LauncherUI's UiScale so overlays sized off this
+        // value (CloudConflictDialog etc.) stay visually consistent with the
+        // launcher across fold/unfold/rotate.
+        return UiScale;
     }
 
     // Used by overlays that need to know the actual viewport height (not the
@@ -106,6 +166,28 @@ public class LauncherUI : Control
     {
         GetTree().ProcessFrame -= OnProcessFrame;
         GetTree().AutoAcceptQuit = true;
+
+        // Hand the Window's content scale back to whatever the game set so the
+        // launcher exit doesn't break the game's own UI sizing.
+        if (_windowScaleOverridden)
+        {
+            try
+            {
+                var window = GetWindow();
+                if (window != null)
+                {
+                    window.ContentScaleSize = _origScaleSize;
+                    window.ContentScaleMode = _origScaleMode;
+                    window.ContentScaleAspect = _origScaleAspect;
+                }
+            }
+            catch (Exception ex)
+            {
+                PatchHelper.Log($"[Launcher] Failed to restore Window ContentScale: {ex.Message}");
+            }
+            _windowScaleOverridden = false;
+        }
+
         _model?.Dispose();
     }
 
