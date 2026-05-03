@@ -20,6 +20,15 @@ public class LauncherUI : Control
     private Window.ContentScaleModeEnum _origScaleMode;
     private Window.ContentScaleAspectEnum _origScaleAspect;
 
+    // Logical canvas the launcher targets. Window.ContentScale is pinned to
+    // these dims with CanvasItems + Expand, so widget scale is computed from
+    // the base size (always 2.0) instead of from the visible rect — the visible
+    // rect grows along the wider physical axis under Expand and would otherwise
+    // give a wildly different scale on fold/unfold/rotate.
+    public const int LogicalWidth = 1920;
+    public const int LogicalHeight = 1080;
+    public const float UiScale = LogicalHeight / 540f; // 2.0
+
     public void Initialize()
     {
         ZIndex = 100;
@@ -68,15 +77,13 @@ public class LauncherUI : Control
 
         try
         {
-            // After ContentScale override, GetVisibleRect reports the logical
-            // (1920×1080) size regardless of physical viewport, so the scale
-            // formula and panel sizing are stable across fold/rotate.
-            var vpSize = GetViewport()?.GetVisibleRect().Size ?? new Vector2(1920, 1080);
+            // ContentScaleAspect.Expand makes GetVisibleRect grow along whatever
+            // physical axis exceeds the project aspect, so don't compute scale
+            // from it (would give different values on fold/unfold/rotate). Use
+            // the base logical size — scale stays a stable 2.0.
+            var vpSize = GetViewport()?.GetVisibleRect().Size ?? new Vector2(LogicalWidth, LogicalHeight);
             SetAnchorsPreset(LayoutPreset.FullRect);
-            Size = vpSize;
-            // Scale by the shorter viewport dimension so widgets fit within the
-            // tighter axis.
-            var scale = Math.Min(vpSize.X, vpSize.Y) / 540f;
+            var scale = UiScale;
 
             _model = new LauncherModel(OS.GetDataDir());
             _model.InGameMode = _inGameMode;
@@ -109,15 +116,10 @@ public class LauncherUI : Control
     // overlays (e.g. cloud conflict dialog) match the rest of the UI sizing.
     public static float ResolveScale(Node sceneRef)
     {
-        try
-        {
-            var vpSize = sceneRef?.GetViewport()?.GetVisibleRect().Size ?? new Vector2(1920, 1080);
-            return Math.Min(vpSize.X, vpSize.Y) / 540f;
-        }
-        catch
-        {
-            return 2.0f;
-        }
+        // Pinned scale matches LauncherUI's UiScale so overlays sized off this
+        // value (CloudConflictDialog etc.) stay visually consistent with the
+        // launcher across fold/unfold/rotate.
+        return UiScale;
     }
 
     // Used by overlays that need to know the actual viewport height (not the
