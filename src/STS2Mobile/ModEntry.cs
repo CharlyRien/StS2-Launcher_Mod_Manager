@@ -58,6 +58,10 @@ public static class ModEntry
 
         _harmony = new Harmony("com.sts2mobile");
 
+        // Game-assembly-independent — must run in both standalone-launcher and game modes
+        // (issue #11 affects the launcher UI too on Fold6).
+        RenderDiagnosticPatches.Apply(_harmony);
+
         // Game patches require sts2.dll; if missing, fall through to standalone launcher.
         try
         {

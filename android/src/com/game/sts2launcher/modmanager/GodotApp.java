@@ -101,6 +101,11 @@ public class GodotApp extends GodotActivity {
 			startLogcatCaptureInternal();
 		}
 
+		// Issue #11 진단 — 보고자 단말 분리용. 제조사/모델/Android/펌웨어 빌드 ID 1줄.
+		Log.i(TAG, "[Diag/Fold] device=" + Build.MANUFACTURER + "/" + Build.MODEL
+				+ " android=" + Build.VERSION.RELEASE + " sdk=" + Build.VERSION.SDK_INT
+				+ " build=" + Build.DISPLAY);
+
 		SplashScreen.installSplashScreen(this);
 		EdgeToEdge.enable(this);
 
