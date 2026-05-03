@@ -15,6 +15,10 @@ public class LauncherUI : Control
     private LauncherView _view;
     private LauncherController _controller;
     private bool _inGameMode;
+    private bool _windowScaleOverridden;
+    private Vector2I _origScaleSize;
+    private Window.ContentScaleModeEnum _origScaleMode;
+    private Window.ContentScaleAspectEnum _origScaleAspect;
 
     public void Initialize()
     {
@@ -34,15 +38,44 @@ public class LauncherUI : Control
             PatchHelper.Log($"[Launcher] Failed to set sensor landscape: {ex.Message}");
         }
 
+        // Pin Window content scale to a fixed logical 1920×1080 with canvas_items +
+        // expand. Godot then auto-stretches the entire UI tree to whatever physical
+        // viewport the foldable / rotation / window resize produces, so widget
+        // sizes computed once at construction (font, button height, padding) keep
+        // looking right after fold/unfold without rebuilding the tree.
+        // Original game-set values are stashed and restored in OnExitTree.
         try
         {
+            var window = GetWindow();
+            if (window != null)
+            {
+                _origScaleSize = window.ContentScaleSize;
+                _origScaleMode = window.ContentScaleMode;
+                _origScaleAspect = window.ContentScaleAspect;
+                window.ContentScaleSize = new Vector2I(1920, 1080);
+                window.ContentScaleMode = Window.ContentScaleModeEnum.CanvasItems;
+                window.ContentScaleAspect = Window.ContentScaleAspectEnum.Expand;
+                _windowScaleOverridden = true;
+                PatchHelper.Log(
+                    $"[Launcher] Window ContentScale overridden (orig size={_origScaleSize}, mode={_origScaleMode}, aspect={_origScaleAspect})"
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            PatchHelper.Log($"[Launcher] Failed to set Window ContentScale: {ex.Message}");
+        }
+
+        try
+        {
+            // After ContentScale override, GetVisibleRect reports the logical
+            // (1920×1080) size regardless of physical viewport, so the scale
+            // formula and panel sizing are stable across fold/rotate.
             var vpSize = GetViewport()?.GetVisibleRect().Size ?? new Vector2(1920, 1080);
             SetAnchorsPreset(LayoutPreset.FullRect);
             Size = vpSize;
             // Scale by the shorter viewport dimension so widgets fit within the
-            // tighter axis. Wide-aspect devices (foldable unfolded ~21:9) used to
-            // pick the long axis here, blowing button height past the viewport
-            // height and clipping bottom-of-panel content.
+            // tighter axis.
             var scale = Math.Min(vpSize.X, vpSize.Y) / 540f;
 
             _model = new LauncherModel(OS.GetDataDir());
@@ -124,6 +157,28 @@ public class LauncherUI : Control
     {
         GetTree().ProcessFrame -= OnProcessFrame;
         GetTree().AutoAcceptQuit = true;
+
+        // Hand the Window's content scale back to whatever the game set so the
+        // launcher exit doesn't break the game's own UI sizing.
+        if (_windowScaleOverridden)
+        {
+            try
+            {
+                var window = GetWindow();
+                if (window != null)
+                {
+                    window.ContentScaleSize = _origScaleSize;
+                    window.ContentScaleMode = _origScaleMode;
+                    window.ContentScaleAspect = _origScaleAspect;
+                }
+            }
+            catch (Exception ex)
+            {
+                PatchHelper.Log($"[Launcher] Failed to restore Window ContentScale: {ex.Message}");
+            }
+            _windowScaleOverridden = false;
+        }
+
         _model?.Dispose();
     }
 

@@ -45,19 +45,10 @@ public class LauncherView
         _panel.Panel.GuiInput += DismissKeyboard;
         parent.AddChild(_panel);
         _panelBaseY = _panel.Position.Y;
-
-        // Repaint the panel when the viewport size changes (sensorLandscape rotation,
-        // foldable hinge open/close, multi-window resize). The CustomMinimumSize set
-        // in UpdateSizeFromViewport doesn't reflow on its own.
-        var vp = parent.GetViewport();
-        if (vp != null)
-            vp.SizeChanged += () =>
-            {
-                var newSize = vp.GetVisibleRect().Size;
-                _panel.UpdateSizeFromViewport(newSize);
-                parent.Size = newSize;
-                _panelBaseY = _panel.Position.Y;
-            };
+        // Window-level ContentScale (set in LauncherUI.Initialize) auto-stretches
+        // logical 1920×1080 to the physical viewport, so manual reflow on
+        // Viewport.SizeChanged is no longer needed — fold/unfold/rotate just
+        // works out of the box.
 
         var hbox = new HBoxContainer();
         hbox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
