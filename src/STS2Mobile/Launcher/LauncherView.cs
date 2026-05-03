@@ -52,13 +52,24 @@ public class LauncherView
         // ContentScaleAspect.Expand. Without recomputing the panel min-size, it
         // stays centered at its original 1824×994 logical with black bars on
         // any axis that grew (most visible after a foldable hinge transition).
+        // The parent.Size update is essential — LauncherUI's parent in the
+        // running game is `gameNode` (a Node, not a Control), so anchors don't
+        // drive auto-sizing. Without setting Size, every child sees a stale
+        // size from the previous viewport and the panel snaps to the corner.
+        // (parent.Size update was present in v0.3.5, dropped in v0.3.6 along
+        // with the hook itself, hook re-added in v0.3.6 but missing this line —
+        // restored in v0.3.8.)
         var vp = parent.GetViewport();
         if (vp != null)
             vp.SizeChanged += () =>
             {
                 var newSize = vp.GetVisibleRect().Size;
+                parent.Size = newSize;
                 _panel.UpdateSizeFromViewport(newSize);
                 _panelBaseY = _panel.Position.Y;
+                PatchHelper.Log(
+                    $"[Launcher] Viewport SizeChanged -> {newSize}; panel resized"
+                );
             };
 
         var hbox = new HBoxContainer();

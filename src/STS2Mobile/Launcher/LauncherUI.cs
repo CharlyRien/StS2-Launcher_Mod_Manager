@@ -83,6 +83,13 @@ public class LauncherUI : Control
             // the base logical size — scale stays a stable 2.0.
             var vpSize = GetViewport()?.GetVisibleRect().Size ?? new Vector2(LogicalWidth, LogicalHeight);
             SetAnchorsPreset(LayoutPreset.FullRect);
+            // Required because LauncherUI's parent is the game's gameNode (a
+            // plain Node, not a Control), so anchors don't drive auto-sizing —
+            // we have to set Size explicitly. Without this, every child Control
+            // sees a 0×0 parent and the launcher collapses into the corner.
+            // (Removed in v0.3.7, restored in v0.3.8 — that removal was the
+            // observed top-left-collapse regression.)
+            Size = vpSize;
             var scale = UiScale;
 
             _model = new LauncherModel(OS.GetDataDir());
