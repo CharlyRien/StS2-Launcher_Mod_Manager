@@ -141,7 +141,7 @@ public class LauncherView
 
         var right = new VBoxContainer();
         right.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        right.SizeFlagsStretchRatio = 4f;
+        right.SizeFlagsStretchRatio = 1f;
         hbox.AddChild(right);
 
         var logHeader = new HBoxContainer();

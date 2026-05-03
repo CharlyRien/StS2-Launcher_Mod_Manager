@@ -144,30 +144,19 @@ public class LauncherController
         MaybePromptStoragePermission();
     }
 
-    // Asks once, on first launch, for "All Files Access". Mods, save backup, and
-    // future launcher features all live under /storage/emulated/0/StS2Launcher/,
-    // so we surface the request up front instead of hiding it inside the (still
-    // WIP) Mod Manager flow. A marker file ensures we never re-prompt.
+    // Re-prompt every launch until storage permission is actually granted.
+    // Mods, save backup, and debug logs all live under
+    // /storage/emulated/0/StS2LauncherMM/, so a stuck-on-no state silently
+    // breaks half the launcher. The previous one-time marker meant a single
+    // misclick on Cancel left the user permanently locked out with no way
+    // back from inside the launcher.
     private void MaybePromptStoragePermission()
     {
         if (AppPaths.HasStoragePermission())
             return;
 
-        var markerPath = System.IO.Path.Combine(
-            OS.GetDataDir(),
-            "storage_permission_prompted"
-        );
-        if (System.IO.File.Exists(markerPath))
-            return;
-
-        try
-        {
-            System.IO.File.WriteAllText(markerPath, "1");
-        }
-        catch { }
-
         _view.ShowConfirmation(
-            "Allow 'All Files Access'?\n\nNeeded for installing mods and saving local game backups under /storage/emulated/0/StS2Launcher/.",
+            "Allow 'All Files Access'?\n\nNeeded for installing mods, saving local game backups, and writing debug logs under /storage/emulated/0/StS2LauncherMM/.\n\nIf you cancel, this prompt will appear again on the next launch.",
             onConfirmed: AppPaths.RequestStoragePermission,
             onCancelled: null
         );
