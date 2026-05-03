@@ -1,6 +1,8 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Godot;
+using STS2Mobile.Launcher.Components;
 using STS2Mobile.Patches;
 using STS2Mobile.Steam;
 
@@ -13,7 +15,8 @@ public class LauncherController
     private readonly LauncherModel _model;
     private readonly LauncherView _view;
     private readonly Action<Action> _runOnMainThread;
-    private volatile bool _checkingForUpdates;
+    private volatile bool _checkingForGameUpdate;
+    private volatile bool _checkingForLauncherUpdate;
     private bool _launchStageShown;
     private string _lastLaunchText = "LAUNCH";
     private bool _lastShowCloudSync;
@@ -97,14 +100,14 @@ public class LauncherController
                 }
                 else
                 {
-                    _view.Actions.SetUpdateButtonText("UP TO DATE");
+                    _view.Actions.SetGameUpdateButtonText("UP TO DATE");
                 }
             });
         _model.UpdateCheckFailed += msg =>
             _runOnMainThread(() =>
             {
-                _view.Actions.SetUpdateButtonText("CHECK FAILED");
-                _view.Actions.SetUpdateButtonDisabled(false);
+                _view.Actions.SetGameUpdateButtonText("CHECK FAILED");
+                _view.Actions.SetGameUpdateButtonDisabled(false);
                 _view.AppendLog($"Update check failed: {msg}");
             });
 
@@ -117,7 +120,8 @@ public class LauncherController
         _view.Actions.CloudSyncToggled += OnCloudSyncToggled;
         _view.Actions.CloudPushPressed += OnCloudPushPressed;
         _view.Actions.CloudPullPressed += OnCloudPullPressed;
-        _view.Actions.CheckForUpdatesPressed += OnCheckForUpdatesPressed;
+        _view.Actions.CheckGameUpdatePressed += OnCheckGameUpdatePressed;
+        _view.Actions.CheckLauncherUpdatePressed += OnCheckLauncherUpdatePressed;
         _view.ModManagerButton.Pressed += OnModManagerPressed;
         _view.ModManager.BackPressed += OnModManagerBackPressed;
 
@@ -198,13 +202,24 @@ public class LauncherController
     private void ShowLaunchStage(string text, bool showCloudSync, bool showUpdate)
     {
         PatchHelper.Log($"[Mods] ShowLaunchStage fired (text='{text}', inGameMode={_model.InGameMode})");
+        var firstShow = !_launchStageShown;
         _launchStageShown = true;
         _lastLaunchText = text;
         _lastShowCloudSync = showCloudSync;
         _lastShowUpdate = showUpdate;
         _view.Actions.ShowLaunch(text, showCloudSync, showUpdate);
         _view.ModManagerButton.Visible = true;
+
+        // Kick off the launcher self-update check the first time we land on the
+        // launch stage. Only once per session, silent if already on latest.
+        if (firstShow && showUpdate && !_autoUpdateChecked)
+        {
+            _autoUpdateChecked = true;
+            _ = AutoCheckLauncherUpdateOnStartup();
+        }
     }
+
+    private bool _autoUpdateChecked;
 
     // Repurposed in 0.3.0 to open the Save Sync dialog instead of the WIP mod
     // manager screen. The original mod-manager navigation is preserved (commented
@@ -301,7 +316,7 @@ public class LauncherController
         )
             return;
 
-        if (_checkingForUpdates)
+        if (_checkingForGameUpdate)
             return;
 
         // After successful login, ignore session disconnects — cloud ops use
@@ -410,11 +425,11 @@ public class LauncherController
         await _model.StartDownloadAsync(picked);
     }
 
-    private async void OnCheckForUpdatesPressed()
+    private async void OnCheckGameUpdatePressed()
     {
-        _checkingForUpdates = true;
-        _view.Actions.SetUpdateButtonDisabled(true);
-        _view.Actions.SetUpdateButtonText("Loading branches...");
+        _checkingForGameUpdate = true;
+        _view.Actions.SetGameUpdateButtonDisabled(true);
+        _view.Actions.SetGameUpdateButtonText("Loading branches...");
 
         System.Collections.Generic.List<SteamBranchInfo> branches;
         try
@@ -424,8 +439,8 @@ public class LauncherController
         catch (Exception ex)
         {
             _view.AppendLog($"Branch list failed: {ex.Message}");
-            ResetUpdateButton();
-            _checkingForUpdates = false;
+            ResetGameUpdateButton();
+            _checkingForGameUpdate = false;
             return;
         }
 
@@ -440,8 +455,8 @@ public class LauncherController
             picked = await ShowBranchPickerAsync(branches, current);
             if (picked == null)
             {
-                ResetUpdateButton();
-                _checkingForUpdates = false;
+                ResetGameUpdateButton();
+                _checkingForGameUpdate = false;
                 return;
             }
         }
@@ -459,8 +474,8 @@ public class LauncherController
             );
             if (!confirmed)
             {
-                ResetUpdateButton();
-                _checkingForUpdates = false;
+                ResetGameUpdateButton();
+                _checkingForGameUpdate = false;
                 return;
             }
             _model.WipeGameFiles();
@@ -471,20 +486,170 @@ public class LauncherController
                 _view.Download.Reset("DOWNLOAD GAME FILES");
                 _view.SetStatus($"Switched to {picked}. Tap DOWNLOAD GAME FILES to redownload.");
             });
-            _checkingForUpdates = false;
+            _checkingForGameUpdate = false;
             return;
         }
 
-        _view.Actions.SetUpdateButtonText(
+        _view.Actions.SetGameUpdateButtonText(
             picked == "public" ? "Checking..." : $"Checking {picked}..."
         );
 
-        // Check for launcher (APK) updates from GitHub in parallel with game file updates.
-        var appUpdateTask = CheckAppUpdateAsync();
         await _model.CheckForUpdatesAsync(picked);
-        await appUpdateTask;
 
-        _checkingForUpdates = false;
+        _checkingForGameUpdate = false;
+    }
+
+    private const string ReleasesPageUrl =
+        "https://github.com/iunius612/StS2-Launcher_Mod_Manager/releases/latest";
+
+    private async void OnCheckLauncherUpdatePressed() =>
+        await RunLauncherUpdateCheck(showLatestDialog: true);
+
+    // Runs at startup once the launch stage is shown so the user is informed
+    // about a new launcher version without having to remember to tap the button.
+    // Silent on "already on latest" to avoid an unsolicited dialog every boot.
+    private async Task AutoCheckLauncherUpdateOnStartup()
+    {
+        await Task.Delay(1500);
+        await RunLauncherUpdateCheck(showLatestDialog: false);
+    }
+
+    private async Task RunLauncherUpdateCheck(bool showLatestDialog)
+    {
+        if (_checkingForLauncherUpdate)
+            return;
+        _checkingForLauncherUpdate = true;
+        _view.Actions.SetLauncherUpdateButtonDisabled(true);
+        _view.Actions.SetLauncherUpdateButtonText("Checking...");
+        PatchHelper.Log("[Launcher] Checking for launcher update...");
+
+        AppUpdateResult result;
+        try
+        {
+            result = await AppUpdateChecker.CheckAsync();
+        }
+        catch (Exception ex)
+        {
+            PatchHelper.Log($"[Launcher] Update check failed: {ex.Message}");
+            _runOnMainThread(() =>
+            {
+                _view.AppendLog($"Launcher update check failed: {ex.Message}");
+                _view.Actions.SetLauncherUpdateButtonText("CHECK LAUNCHER UPDATE");
+                _view.Actions.SetLauncherUpdateButtonDisabled(false);
+                if (showLatestDialog)
+                    _view.ShowConfirmation(
+                        $"Failed to check for launcher updates.\n\n{ex.Message}",
+                        onConfirmed: () => { },
+                        onCancelled: null
+                    );
+            });
+            _checkingForLauncherUpdate = false;
+            return;
+        }
+
+        PatchHelper.Log($"[Launcher] Update check result: HasUpdate={result.HasUpdate}, latest={result.LatestVersion}");
+
+        if (!result.HasUpdate)
+        {
+            _runOnMainThread(() =>
+            {
+                _view.Actions.SetLauncherUpdateButtonText("CHECK LAUNCHER UPDATE");
+                _view.Actions.SetLauncherUpdateButtonDisabled(false);
+                if (showLatestDialog)
+                    _view.ShowConfirmation(
+                        "You're already on the latest launcher version.\n\nOpen the GitHub releases page anyway?",
+                        onConfirmed: () => OS.ShellOpen(ReleasesPageUrl),
+                        onCancelled: null
+                    );
+            });
+            _checkingForLauncherUpdate = false;
+            return;
+        }
+
+        _runOnMainThread(() =>
+        {
+            _view.Actions.SetLauncherUpdateButtonText($"v{result.LatestVersion} available");
+            _view.Actions.SetLauncherUpdateButtonDisabled(false);
+            PromptLauncherUpdate(result);
+        });
+        _checkingForLauncherUpdate = false;
+    }
+
+    private void PromptLauncherUpdate(AppUpdateResult result)
+    {
+        // No APK asset attached to the release — fall back to opening the GitHub page.
+        if (string.IsNullOrEmpty(result.DownloadUrl))
+        {
+            _view.ShowConfirmation(
+                $"Launcher v{result.LatestVersion} is available, but no APK asset was attached.\n\nOpen the GitHub releases page in a browser?",
+                onConfirmed: () => OS.ShellOpen(ReleasesPageUrl),
+                onCancelled: null
+            );
+            return;
+        }
+
+        // System "install unknown apps" toggle is per-source on Android 8+. Without it
+        // the install Intent silently no-ops, so route the user to settings first.
+        if (!AppUpdateInstaller.CanRequestInstallPackages())
+        {
+            _view.ShowConfirmation(
+                $"Launcher v{result.LatestVersion} is available.\n\nTo install it, allow this app to install other apps. Open system settings?",
+                onConfirmed: AppUpdateInstaller.RequestInstallPackagesPermission,
+                onCancelled: null
+            );
+            return;
+        }
+
+        _view.ShowConfirmation(
+            $"Launcher v{result.LatestVersion} is available.\n\nDownload and install now?",
+            onConfirmed: () => StartLauncherDownload(result),
+            onCancelled: null
+        );
+    }
+
+    private void StartLauncherDownload(AppUpdateResult result)
+    {
+        var dialog = _view.ShowLauncherUpdateDialog(result.LatestVersion);
+        var cts = new CancellationTokenSource();
+        dialog.Cancelled += () => cts.Cancel();
+
+        var progress = new Progress<ApkDownloadProgress>(p =>
+            _runOnMainThread(() => dialog.SetProgress(p.DownloadedBytes, p.TotalBytes, p.Percentage))
+        );
+
+        Task.Run(async () =>
+        {
+            try
+            {
+                var apkPath = await AppUpdateInstaller.DownloadApkAsync(
+                    result.DownloadUrl,
+                    progress,
+                    cts.Token
+                );
+                _runOnMainThread(() =>
+                {
+                    dialog.Close();
+                    _view.AppendLog($"Launcher update v{result.LatestVersion} downloaded; opening installer...");
+                    AppUpdateInstaller.LaunchInstall(apkPath);
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                _runOnMainThread(() =>
+                {
+                    dialog.Close();
+                    _view.AppendLog("Launcher update download cancelled.");
+                });
+            }
+            catch (Exception ex)
+            {
+                _runOnMainThread(() =>
+                {
+                    dialog.Close();
+                    _view.AppendLog($"Launcher update download failed: {ex.Message}");
+                });
+            }
+        });
     }
 
     private Task<bool> ConfirmAsync(string message)
@@ -501,10 +666,10 @@ public class LauncherController
         return tcs.Task;
     }
 
-    private void ResetUpdateButton()
+    private void ResetGameUpdateButton()
     {
-        _view.Actions.SetUpdateButtonText("CHECK FOR UPDATES");
-        _view.Actions.SetUpdateButtonDisabled(false);
+        _view.Actions.SetGameUpdateButtonText("CHECK GAME UPDATE");
+        _view.Actions.SetGameUpdateButtonDisabled(false);
     }
 
     private Task<string> ShowBranchPickerAsync(
@@ -523,38 +688,6 @@ public class LauncherController
             );
         });
         return tcs.Task;
-    }
-
-    private static readonly Color YellowLog = new(1f, 0.85f, 0.2f);
-
-    private async Task CheckAppUpdateAsync()
-    {
-        try
-        {
-            var result = await AppUpdateChecker.CheckAsync();
-            if (!result.HasUpdate)
-            {
-                _runOnMainThread(() => _view.AppendLog("Launcher is up to date"));
-            }
-            else
-            {
-                _runOnMainThread(() =>
-                {
-                    _view.AppendColoredLog(
-                        $"Launcher update available: v{result.LatestVersion} — "
-                            + "download at https://github.com/Ekyso/StS2-Launcher/releases/latest",
-                        YellowLog
-                    );
-                    _view.SetStatus(
-                        $"Launcher update available! Visit GitHub to download v{result.LatestVersion}"
-                    );
-                });
-            }
-        }
-        catch (Exception ex)
-        {
-            PatchHelper.Log($"[Launcher] App update check failed: {ex.Message}");
-        }
     }
 
     private void OnLocalBackupToggled(bool pressed)

@@ -40,11 +40,24 @@ public class LauncherView
         bg.GuiInput += DismissKeyboard;
         parent.AddChild(bg);
 
-        _panel = new StyledPanel(scale, widthRatio: 0.9f);
+        _panel = new StyledPanel(scale, widthRatio: 0.95f, heightRatio: 0.92f);
         _panel.UpdateSizeFromViewport(vpSize);
         _panel.Panel.GuiInput += DismissKeyboard;
         parent.AddChild(_panel);
         _panelBaseY = _panel.Position.Y;
+
+        // Repaint the panel when the viewport size changes (sensorLandscape rotation,
+        // foldable hinge open/close, multi-window resize). The CustomMinimumSize set
+        // in UpdateSizeFromViewport doesn't reflow on its own.
+        var vp = parent.GetViewport();
+        if (vp != null)
+            vp.SizeChanged += () =>
+            {
+                var newSize = vp.GetVisibleRect().Size;
+                _panel.UpdateSizeFromViewport(newSize);
+                parent.Size = newSize;
+                _panelBaseY = _panel.Position.Y;
+            };
 
         var hbox = new HBoxContainer();
         hbox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
@@ -208,6 +221,13 @@ public class LauncherView
         if (onCancelled != null)
             dialog.Cancelled += onCancelled;
         _parent.AddChild(dialog);
+    }
+
+    public LauncherUpdateDialog ShowLauncherUpdateDialog(string version)
+    {
+        var dialog = new LauncherUpdateDialog(version, _scale);
+        _parent.AddChild(dialog);
+        return dialog;
     }
 
     public void ShowBranchPicker(

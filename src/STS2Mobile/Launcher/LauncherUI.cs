@@ -20,12 +20,30 @@ public class LauncherUI : Control
     {
         ZIndex = 100;
 
+        // The game PCK's project.godot pins display/window/handheld/orientation to
+        // landscape, which Godot applies at runtime and silently overrides the
+        // activity's android:screenOrientation="sensorLandscape". Force sensor
+        // landscape from C# so the user can flip the device 180° (USB-C charging
+        // angle) and have the screen rotate.
+        try
+        {
+            DisplayServer.ScreenSetOrientation(DisplayServer.ScreenOrientation.SensorLandscape);
+        }
+        catch (Exception ex)
+        {
+            PatchHelper.Log($"[Launcher] Failed to set sensor landscape: {ex.Message}");
+        }
+
         try
         {
             var vpSize = GetViewport()?.GetVisibleRect().Size ?? new Vector2(1920, 1080);
             SetAnchorsPreset(LayoutPreset.FullRect);
             Size = vpSize;
-            var scale = Math.Max(vpSize.X, vpSize.Y) / 960f;
+            // Scale by the shorter viewport dimension so widgets fit within the
+            // tighter axis. Wide-aspect devices (foldable unfolded ~21:9) used to
+            // pick the long axis here, blowing button height past the viewport
+            // height and clipping bottom-of-panel content.
+            var scale = Math.Min(vpSize.X, vpSize.Y) / 540f;
 
             _model = new LauncherModel(OS.GetDataDir());
             _model.InGameMode = _inGameMode;
@@ -61,7 +79,7 @@ public class LauncherUI : Control
         try
         {
             var vpSize = sceneRef?.GetViewport()?.GetVisibleRect().Size ?? new Vector2(1920, 1080);
-            return Math.Max(vpSize.X, vpSize.Y) / 960f;
+            return Math.Min(vpSize.X, vpSize.Y) / 540f;
         }
         catch
         {

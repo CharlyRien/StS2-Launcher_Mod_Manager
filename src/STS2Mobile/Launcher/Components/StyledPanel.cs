@@ -7,8 +7,9 @@ public class StyledPanel : CenterContainer
 {
     public VBoxContainer Content { get; }
 
-    public StyledPanel(float scale, float widthRatio = 0.7f)
+    public StyledPanel(float scale, float widthRatio = 0.7f, float heightRatio = 0.92f)
     {
+        _heightRatio = heightRatio;
         SetAnchorsPreset(LayoutPreset.FullRect);
 
         var vpSize = new Vector2(1920, 1080); // fallback, overridden after AddChild
@@ -38,15 +39,14 @@ public class StyledPanel : CenterContainer
     public PanelContainer Panel => _panelContainer;
     private readonly PanelContainer _panelContainer;
     private readonly float _widthRatio;
-
-    private const float MaxWidth = 1400f;
-    private const float MaxHeight = 800f;
+    private readonly float _heightRatio;
 
     public void UpdateSizeFromViewport(Vector2 vpSize)
     {
-        var w = Math.Min(vpSize.X * _widthRatio, MaxWidth);
-        var h = Math.Min(vpSize.Y * 0.85f, MaxHeight);
+        var w = vpSize.X * _widthRatio;
+        var h = vpSize.Y * _heightRatio;
         _panelContainer.CustomMinimumSize = new Vector2(w, h);
+        _panelContainer.Size = new Vector2(w, h);
     }
 
     private static int S(float scale, int v) => (int)(v * scale);

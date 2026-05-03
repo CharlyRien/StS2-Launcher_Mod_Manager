@@ -12,7 +12,8 @@ public class ActionSection : VBoxContainer
     public event Action<bool> CloudSyncToggled;
     public event Action CloudPushPressed;
     public event Action CloudPullPressed;
-    public event Action CheckForUpdatesPressed;
+    public event Action CheckGameUpdatePressed;
+    public event Action CheckLauncherUpdatePressed;
 
     private readonly Button _launchButton;
     private readonly Button _retryButton;
@@ -20,7 +21,8 @@ public class ActionSection : VBoxContainer
     private readonly StyledButton _cloudSyncToggle;
     private readonly Button _pushButton;
     private readonly Button _pullButton;
-    private readonly Button _updateButton;
+    private readonly Button _gameUpdateButton;
+    private readonly Button _launcherUpdateButton;
     private readonly StyleBoxFlat _offStyle;
     private readonly StyleBoxFlat _onStyle;
 
@@ -76,10 +78,15 @@ public class ActionSection : VBoxContainer
 
         AddChild(pushPullRow);
 
-        _updateButton = new StyledButton("CHECK FOR UPDATES", scale, fontSize: 16, height: 48);
-        _updateButton.Visible = false;
-        _updateButton.Pressed += () => CheckForUpdatesPressed?.Invoke();
-        AddChild(_updateButton);
+        _gameUpdateButton = new StyledButton("CHECK GAME UPDATE", scale, fontSize: 16, height: 48);
+        _gameUpdateButton.Visible = false;
+        _gameUpdateButton.Pressed += () => CheckGameUpdatePressed?.Invoke();
+        AddChild(_gameUpdateButton);
+
+        _launcherUpdateButton = new StyledButton("CHECK LAUNCHER UPDATE", scale, fontSize: 16, height: 48);
+        _launcherUpdateButton.Visible = false;
+        _launcherUpdateButton.Pressed += () => CheckLauncherUpdatePressed?.Invoke();
+        AddChild(_launcherUpdateButton);
 
         _launchButton = new StyledButton("LAUNCH", scale, fontSize: 16, height: 48);
         _launchButton.Visible = false;
@@ -119,9 +126,12 @@ public class ActionSection : VBoxContainer
         _localBackupToggle.Visible = showCloudSync;
         _cloudSyncToggle.Visible = showCloudSync;
         PushPullRow.Visible = showCloudSync;
-        _updateButton.Visible = showUpdate;
-        _updateButton.Disabled = false;
-        _updateButton.Text = "CHECK FOR UPDATES";
+        _gameUpdateButton.Visible = showUpdate;
+        _gameUpdateButton.Disabled = false;
+        _gameUpdateButton.Text = "CHECK GAME UPDATE";
+        _launcherUpdateButton.Visible = showUpdate;
+        _launcherUpdateButton.Disabled = false;
+        _launcherUpdateButton.Text = "CHECK LAUNCHER UPDATE";
         _retryButton.Visible = false;
     }
 
@@ -132,7 +142,8 @@ public class ActionSection : VBoxContainer
         _localBackupToggle.Visible = false;
         _cloudSyncToggle.Visible = false;
         PushPullRow.Visible = false;
-        _updateButton.Visible = false;
+        _gameUpdateButton.Visible = false;
+        _launcherUpdateButton.Visible = false;
     }
 
     public void HideAll()
@@ -142,7 +153,8 @@ public class ActionSection : VBoxContainer
         _localBackupToggle.Visible = false;
         _cloudSyncToggle.Visible = false;
         PushPullRow.Visible = false;
-        _updateButton.Visible = false;
+        _gameUpdateButton.Visible = false;
+        _launcherUpdateButton.Visible = false;
     }
 
     // Locks every sync-affecting button while a cloud operation is in flight.
@@ -158,7 +170,12 @@ public class ActionSection : VBoxContainer
         _launchButton.Disabled = busy;
     }
 
-    public void SetUpdateButtonText(string text) => _updateButton.Text = text;
+    public void SetGameUpdateButtonText(string text) => _gameUpdateButton.Text = text;
 
-    public void SetUpdateButtonDisabled(bool disabled) => _updateButton.Disabled = disabled;
+    public void SetGameUpdateButtonDisabled(bool disabled) => _gameUpdateButton.Disabled = disabled;
+
+    public void SetLauncherUpdateButtonText(string text) => _launcherUpdateButton.Text = text;
+
+    public void SetLauncherUpdateButtonDisabled(bool disabled) =>
+        _launcherUpdateButton.Disabled = disabled;
 }

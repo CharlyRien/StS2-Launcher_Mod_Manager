@@ -4,12 +4,16 @@ import org.godotengine.godot.Godot;
 import org.godotengine.godot.GodotActivity;
 
 import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
+import androidx.core.content.FileProvider;
 import androidx.core.splashscreen.SplashScreen;
 
 import android.content.SharedPreferences;
@@ -551,6 +555,49 @@ public class GodotApp extends GodotActivity {
 			Log.e(TAG, "Failed to read picked zip(s)", e);
 		} finally {
 			pickerActive = false;
+		}
+	}
+
+	// === Launcher self-update (issue #12) ===
+
+	public String getCacheDirPath() {
+		return getCacheDir().getAbsolutePath();
+	}
+
+	// On Android 8+, "install unknown apps" is a per-source toggle. Without it the
+	// install Intent silently no-ops, so the UI must check this and route the user
+	// to settings before downloading.
+	public boolean canRequestInstallPackages() {
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+			return getPackageManager().canRequestPackageInstalls();
+		}
+		return true;
+	}
+
+	public void requestInstallPackagesPermission() {
+		try {
+			Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
+			i.setData(Uri.parse("package:" + getPackageName()));
+			i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+			startActivity(i);
+		} catch (Exception e) {
+			Log.e(TAG, "REQUEST_INSTALL_PACKAGES intent failed", e);
+		}
+	}
+
+	// Hands the downloaded APK to the system installer via FileProvider.
+	// FILE_GRANT_READ_URI_PERMISSION is required so the installer (a different
+	// process) can read the cache file.
+	public void installApk(String apkPath) {
+		try {
+			File f = new File(apkPath);
+			Uri uri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", f);
+			Intent intent = new Intent(Intent.ACTION_VIEW);
+			intent.setDataAndType(uri, "application/vnd.android.package-archive");
+			intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+			startActivity(intent);
+		} catch (Exception e) {
+			Log.e(TAG, "installApk failed for " + apkPath, e);
 		}
 	}
 

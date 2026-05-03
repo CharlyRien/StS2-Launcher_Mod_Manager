@@ -10,7 +10,7 @@ namespace STS2Mobile.Steam;
 public static class AppUpdateChecker
 {
     private const string ReleasesUrl =
-        "https://api.github.com/repos/Ekyso/StS2-Launcher/releases/latest";
+        "https://api.github.com/repos/iunius612/StS2-Launcher_Mod_Manager/releases/latest";
 
     public static async Task<AppUpdateResult> CheckAsync()
     {
@@ -25,14 +25,21 @@ public static class AppUpdateChecker
         using var doc = JsonDocument.Parse(response);
         var root = doc.RootElement;
 
+        // Prefer tag_name (always clean like "v0.3.3") over name (often
+        // decorated like "v0.3.3 — Description") so version parsing doesn't
+        // trip over the suffix.
+        var releaseTag = root.TryGetProperty("tag_name", out var tagProp)
+            ? tagProp.GetString()
+            : null;
         var releaseName = root.TryGetProperty("name", out var nameProp)
             ? nameProp.GetString()
             : null;
+        var rawLatest = !string.IsNullOrEmpty(releaseTag) ? releaseTag : releaseName;
 
-        if (releaseName == null)
+        if (rawLatest == null)
             return AppUpdateResult.None;
 
-        var latestVersion = NormalizeVersion(releaseName);
+        var latestVersion = NormalizeVersion(rawLatest);
         var installedVersion = NormalizeVersion(currentVersion);
 
         if (latestVersion == null || installedVersion == null)
@@ -75,11 +82,17 @@ public static class AppUpdateChecker
         }
     }
 
+    // Returns the leading semver-like portion of the input ("v0.3.3 — foo" → "0.3.3").
     private static string NormalizeVersion(string version)
     {
         if (string.IsNullOrEmpty(version))
             return null;
-        return version.TrimStart('v', 'V');
+        var trimmed = version.TrimStart('v', 'V').TrimStart();
+        int len = 0;
+        while (len < trimmed.Length && (char.IsDigit(trimmed[len]) || trimmed[len] == '.'))
+            len++;
+        var head = trimmed.Substring(0, len).TrimEnd('.');
+        return head.Length == 0 ? null : head;
     }
 
     private static int CompareVersions(string a, string b)
