@@ -927,10 +927,9 @@ public class LauncherController
             onConfirmed: () => RebuildCacheAndRestart(current),
             onCancelled: () =>
             {
-                // 사용자가 이번 빌드는 정리 안 하기로 결정 → stamp만 작성.
-                // 게임이 다음에 업데이트되면 (release_info.commit 변경) 자동으로
-                // mismatch 다이얼로그가 다시 떠서 한번 더 결정 기회를 줌.
-                current.Write();
+                // stamp 갱신 안 함 → 다음 PLAY에서도 또 prompt. 사용자가
+                // 실수로 "건너뛰기" 눌러도 게임 업데이트(commit 변경)까지
+                // 깨진 상태로 갇히지 않도록. "캐시 정리" 누를 때까지 매번 prompt.
                 _model.Launch();
             },
             okLabel: "캐시 정리",
@@ -951,9 +950,9 @@ public class LauncherController
             onConfirmed: () => RebuildCacheAndRestart(current),
             onCancelled: () =>
             {
-                // 사용자가 이번 빌드는 정리 안 하기로 → stamp 갱신해서 같은
-                // 빌드 동안 매번 묻지 않음. 다음 게임 업데이트 시점에 다시 prompt.
-                current.Write();
+                // stamp 갱신 안 함 → 다음 PLAY에서도 또 prompt. 사용자가
+                // 실수로 "그냥 진행" 눌러도 다음 PLAY에 회복 기회. "캐시 정리"
+                // 누를 때까지 매번 prompt — 안전 우선.
                 _model.Launch();
             },
             okLabel: "캐시 정리",
