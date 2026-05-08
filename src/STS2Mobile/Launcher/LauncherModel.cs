@@ -248,9 +248,9 @@ public class LauncherModel : IDisposable
     }
 
     // Reads the just-downloaded release_info.json and merges it with the Steam
-    // BuildId into a CacheStamp. Issue #5: a missing or stale stamp is what
-    // makes the next PLAY surface a cache-rebuild prompt, so writing this is
-    // load-bearing — failures here are logged but not fatal to the download.
+    // BuildId into a CacheStamp. Issue #5 (and v0.3.15 후속): a missing or
+    // stale stamp is what makes the next PLAY surface a cache-rebuild prompt,
+    // so writing this is load-bearing — failures here are logged but not fatal.
     private void WriteCacheStampAfterDownload(string branch, string buildId)
     {
         var current = CacheStamp.BuildCurrent();
@@ -261,10 +261,29 @@ public class LauncherModel : IDisposable
             Commit = current?.Commit ?? "",
             Version = current?.Version ?? "",
         };
+
+        // 같은 브랜치 안 update (WipeGameFiles 안 거침) 흐름에서도 PCK 가 바뀌면
+        // .godot/imported/ 도 재생성해야 카드 인덱스가 새 PCK 와 맞음. 이전 stamp
+        // 와 commit/buildId 가 다르면 sentinel 작성 → 다음 cold start 에서 자동
+        // wipe. 첫 다운로드 (prev == null) 는 imported 가 아직 없어 불필요.
+        // 브랜치 전환 흐름은 WipeGameFiles 가 이미 sentinel 작성해놓은 상태이므로
+        // 이 분기가 false 더라도 처리에 문제없음.
+        var prev = CacheStamp.Read();
+        if (
+            prev != null
+            && (
+                !string.Equals(prev.Commit, stamp.Commit, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(prev.BuildId, stamp.BuildId, StringComparison.OrdinalIgnoreCase)
+            )
+        )
+        {
+            CacheStamp.RequestRebuild();
+            PatchHelper.Log(
+                $"[Launcher] Build changed (commit {prev.Commit}→{stamp.Commit}, build {prev.BuildId}→{stamp.BuildId}), cache rebuild requested"
+            );
+        }
+
         stamp.Write();
-        // The fresh download supersedes any pending rebuild request from a
-        // prior WipeGameFiles call — Java sentinel will still fire on this
-        // boot's restart, after which the new stamp is in sync.
     }
 
     public async Task CheckForUpdatesAsync(string branch = null)
