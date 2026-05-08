@@ -119,6 +119,25 @@ public class GodotApp extends GodotActivity {
 		// Must be called before any native FMOD calls.
 		FMOD.init(this);
 
+		// v0.3.16 one-shot migration. v0.3.12~15 동안 같은 브랜치 update 받은
+		// 사용자는 stamp 만 새 commit 으로 갱신되고 .godot/imported/ 는 이전
+		// 빌드 기준이라 카드/유물 인덱스가 어긋난 상태. v0.3.15 의 download-time
+		// fix 는 다음 다운로드 받을 때만 작동해 이미 stamp 갱신된 사용자엔 retro
+		// 적용 안 됨. SharedPreferences flag 로 한 번만 강제 sentinel 작성.
+		SharedPreferences migrationPrefs = getSharedPreferences("sts2mobile", MODE_PRIVATE);
+		if (!migrationPrefs.getBoolean("cache_migration_v2", false)) {
+			File migrationSentinel = new File(getFilesDir(), ".cache_rebuild_sentinel");
+			try {
+				if (!migrationSentinel.exists()) {
+					migrationSentinel.createNewFile();
+				}
+				Log.i(TAG, "[Migration] cache_migration_v2 — forced sentinel for v0.3.12~15 affected users");
+			} catch (IOException ex) {
+				Log.w(TAG, "[Migration] failed to create migration sentinel", ex);
+			}
+			migrationPrefs.edit().putBoolean("cache_migration_v2", true).apply();
+		}
+
 		// Issue #5: if the launcher requested a cache rebuild on the previous
 		// run (branch switch wipe, or user-confirmed mismatch dialog), wipe
 		// .godot/ here so Godot regenerates import/shader/script caches against
@@ -333,6 +352,7 @@ public class GodotApp extends GodotActivity {
 
 		destDir.mkdirs();
 
+		java.util.Set<String> bclNames = new java.util.HashSet<>();
 		try {
 			String[] bclFiles = getAssets().list("dotnet_bcl");
 			if (bclFiles != null) {
@@ -345,6 +365,7 @@ public class GodotApp extends GodotActivity {
 						while ((len = in.read(buf)) > 0) {
 							out.write(buf, 0, len);
 						}
+						bclNames.add(name);
 						count++;
 					}
 				}
@@ -368,14 +389,32 @@ public class GodotApp extends GodotActivity {
 			return;
 
 		int count = 0;
+		int skipped = 0;
+		int bclProtected = 0;
 		for (File src : files) {
 			if (src.isFile()) {
 				String name = src.getName();
 				if (name.endsWith(".so")) {
 					continue;
 				}
+				// CRITICAL: depot 의 game assembly 디렉토리에는 desktop CoreCLR
+				// 버전의 System.*, mscorlib 같은 BCL dll 이 들어있음. 이것들은
+				// Android Mono 와 호환되지 않으므로 absolutely 덮어쓰면 안 됨.
+				// (System.Diagnostics.MonoStackFrame not found → Mono 부팅 실패)
+				if (bclNames.contains(name)) {
+					bclProtected++;
+					continue;
+				}
 				File dest = new File(destDir, name);
-				if (dest.exists()) {
+				// Issue #5 진짜 root cause: 이전에는 dest.exists() 면 무조건 skip
+				// 이라 게임이 update 되어 src 의 sts2.dll 이 새 버전으로 갱신돼도
+				// dest 의 옛 dll 이 그대로 남아 NCard.cs 가 새 .tscn 의
+				// %AncientHighlight 같은 노드를 못 찾는 mismatch 발생.
+				// BCL 충돌 방지 후 size+mtime 으로 동기화 여부 판단해 다르면 덮어쓰기.
+				if (dest.exists()
+						&& dest.length() == src.length()
+						&& dest.lastModified() >= src.lastModified()) {
+					skipped++;
 					continue;
 				}
 				try {
@@ -386,7 +425,8 @@ public class GodotApp extends GodotActivity {
 				}
 			}
 		}
-		Log.i(TAG, "Copied " + count + " game assembly files");
+		Log.i(TAG, "Copied " + count + " game assembly files (skipped " + skipped
+				+ " up-to-date, " + bclProtected + " BCL-protected)");
 	}
 
 	private File findAssembliesDir() {
