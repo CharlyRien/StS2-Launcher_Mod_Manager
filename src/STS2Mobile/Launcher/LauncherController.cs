@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Godot;
@@ -208,6 +209,68 @@ public class LauncherController
         {
             _autoUpdateChecked = true;
             _ = AutoCheckLauncherUpdateOnStartup();
+        }
+
+        if (firstShow)
+        {
+            // Tell Java to drop the cache-rebuild loading overlay (no-op when
+            // overlay was never shown — normal boots aren't blocked by this).
+            LauncherModel.GetGodotApp()?.Call("hideLoadingOverlay");
+            DispatchDebugIntents();
+        }
+    }
+
+    // Debug-only: GodotApp.java drops marker files when started with
+    // `adb shell am start --es debug_force_<dialog> 1` (only on -debug builds).
+    // Convert them into real dialog calls so we can verify UI / Korean copy /
+    // marker extraction without round-tripping through GitHub or Steam.
+    private void DispatchDebugIntents()
+    {
+        try
+        {
+            var dataDir = OS.GetDataDir();
+            var updateMarker = Path.Combine(dataDir, ".debug_force_update_dialog");
+            if (File.Exists(updateMarker))
+            {
+                var lines = File.ReadAllLines(updateMarker);
+                var fakeVersion = lines.Length > 0 ? lines[0] : "0.0.0";
+                var fakeBody = lines.Length > 1
+                    ? string.Join("\n", lines, 1, lines.Length - 1)
+                    : "";
+                var fakeNotes = ReleaseNotes.ExtractDialogBody(fakeBody);
+                var fakeResult = new AppUpdateResult(
+                    fakeVersion,
+                    "https://example.invalid/fake.apk",
+                    fakeNotes
+                );
+                File.Delete(updateMarker);
+                PatchHelper.Log("[Debug] Forcing PromptLauncherUpdate via debug intent");
+                PromptLauncherUpdate(fakeResult);
+            }
+
+            var mismatchMarker = Path.Combine(dataDir, ".debug_force_cache_mismatch_dialog");
+            if (File.Exists(mismatchMarker))
+            {
+                File.Delete(mismatchMarker);
+                var fakeStamp = new CacheStamp
+                {
+                    Branch = "public",
+                    Commit = "old1234",
+                    Version = "0.103.4",
+                };
+                var fakeCurrent = new CacheStamp
+                {
+                    Branch = "public-beta",
+                    Commit = "new5678",
+                    Version = "0.103.7",
+                };
+                PatchHelper.Log("[Debug] Forcing ShowCacheMismatchPrompt via debug intent");
+                ShowCacheMismatchPrompt(fakeStamp, fakeCurrent);
+            }
+        }
+        catch (Exception ex)
+        {
+            PatchHelper.Log($"[Debug] DispatchDebugIntents failed: {ex.Message}");
         }
     }
 
@@ -592,8 +655,14 @@ public class LauncherController
             return;
         }
 
+        // Release notes excerpt (between <!-- launcher-dialog --> markers) is
+        // shown verbatim if present. Authors keep these short — the full
+        // changelog lives on the GitHub release page.
+        var msg = string.IsNullOrEmpty(result.ReleaseNotes)
+            ? $"Launcher v{result.LatestVersion} is available.\n\nDownload and install now?"
+            : $"Launcher v{result.LatestVersion} is available.\n\n{result.ReleaseNotes}\n\nDownload and install now?";
         _view.ShowConfirmation(
-            $"Launcher v{result.LatestVersion} is available.\n\nDownload and install now?",
+            msg,
             onConfirmed: () => StartLauncherDownload(result),
             onCancelled: null
         );
@@ -794,5 +863,111 @@ public class LauncherController
         HandleFastPath(result);
     }
 
-    private void OnLaunchPressed() => _model.Launch();
+    private void OnLaunchPressed()
+    {
+        // sentinel 처리는 GodotApp.onCreate 에서만 일어남 → cold start 강제 필요.
+        // _model.Launch() 는 InGameMode 일 때 _launchTcs 로 빠져 같은 프로세스
+        // 안에서 게임 PCK 재로드 → onCreate 안 거치고 sentinel 누락 → 이슈 #5
+        // 재현. 그래서 sentinel 있으면 InGameMode 무시하고 무조건 restartApp.
+        if (CacheStamp.IsRebuildRequested())
+        {
+            PatchHelper.Log("[Launcher] Rebuild pending, forcing restartApp for cold-start sentinel processing");
+            LauncherModel.GetGodotApp()?.Call("restartApp");
+            return;
+        }
+
+        var current = CacheStamp.BuildCurrent();
+        if (current == null)
+        {
+            // No PCK yet (or release_info.json missing). Nothing to compare —
+            // the launcher won't even show PLAY in that state, but be safe.
+            _model.Launch();
+            return;
+        }
+
+        var stamp = CacheStamp.Read();
+        if (stamp != null && stamp.MatchesCurrent(current))
+        {
+            _model.Launch();
+            return;
+        }
+
+        if (stamp == null)
+        {
+            // Issue #5 broken-by-prior-version path: stamp was never written
+            // because v0.3.11 and earlier didn't have this flow. Only prompt
+            // if there's actually a Godot import cache that could be stale.
+            if (CacheStamp.IsLegacyState())
+            {
+                ShowLegacyCachePrompt(current);
+            }
+            else
+            {
+                // No prior Godot cache to worry about — write a stamp silently
+                // so future PLAYs can compare cleanly.
+                current.Write();
+                _model.Launch();
+            }
+            return;
+        }
+
+        ShowCacheMismatchPrompt(stamp, current);
+    }
+
+    private void ShowLegacyCachePrompt(CacheStamp current)
+    {
+        var msg =
+            "이전 빌드 정보가 없어 게임 캐시 일치 여부를 확인할 수 없습니다.\n\n"
+            + $"현재 게임 버전: v{current.Version} ({current.Branch})\n\n"
+            + "이전에 브랜치를 전환한 적이 있다면 카드/유물 이미지가\n"
+            + "잘못 표시될 수 있습니다 (이슈 #5).\n\n"
+            + "한 번 캐시를 정리하시겠습니까?\n(다운로드 불필요, 약 30초 소요)";
+        _view.ShowConfirmation(
+            msg,
+            onConfirmed: () => RebuildCacheAndRestart(current),
+            onCancelled: () =>
+            {
+                // 사용자가 이번 빌드는 정리 안 하기로 결정 → stamp만 작성.
+                // 게임이 다음에 업데이트되면 (release_info.commit 변경) 자동으로
+                // mismatch 다이얼로그가 다시 떠서 한번 더 결정 기회를 줌.
+                current.Write();
+                _model.Launch();
+            },
+            okLabel: "캐시 정리",
+            cancelLabel: "건너뛰기"
+        );
+    }
+
+    private void ShowCacheMismatchPrompt(CacheStamp stamp, CacheStamp current)
+    {
+        var msg =
+            "게임 캐시 불일치가 감지되었습니다.\n\n"
+            + $"이전 빌드: v{stamp.Version} ({stamp.Branch})\n"
+            + $"현재 빌드: v{current.Version} ({current.Branch})\n\n"
+            + "이대로 진행하면 카드/유물 이미지가 잘못 표시될 수 있습니다.\n"
+            + "캐시를 정리하면 해결됩니다 (다운로드 불필요).";
+        _view.ShowConfirmation(
+            msg,
+            onConfirmed: () => RebuildCacheAndRestart(current),
+            onCancelled: () =>
+            {
+                // 사용자가 이번 빌드는 정리 안 하기로 → stamp 갱신해서 같은
+                // 빌드 동안 매번 묻지 않음. 다음 게임 업데이트 시점에 다시 prompt.
+                current.Write();
+                _model.Launch();
+            },
+            okLabel: "캐시 정리",
+            cancelLabel: "그냥 진행"
+        );
+    }
+
+    // User accepted: stamp the cache as the current PCK, drop a sentinel for
+    // GodotApp.onCreate to wipe .godot/ on the next boot, then hard-restart.
+    private void RebuildCacheAndRestart(CacheStamp current)
+    {
+        current.Write();
+        CacheStamp.RequestRebuild();
+        PatchHelper.Log("[Launcher] Cache rebuild requested by user, restarting");
+        LauncherModel.GetGodotApp()?.Call("restartApp");
+    }
 }

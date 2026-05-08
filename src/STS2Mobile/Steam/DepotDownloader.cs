@@ -48,6 +48,10 @@ public class DepotDownloader : IDisposable
     public event Action<DownloadProgress> ProgressChanged;
     public event Action<string> LogMessage;
 
+    // Set by DownloadAsync from depots/branches/<branch>/buildid in PICS info.
+    // Read by LauncherModel after a successful download to stamp the cache.
+    public string LastDownloadedBuildId { get; private set; }
+
     public DepotDownloader(SteamConnection connection, string dataDir)
     {
         _connection = connection;
@@ -100,6 +104,10 @@ public class DepotDownloader : IDisposable
             var depots = await ParseDepotsAsync(depotSection, branch);
             if (depots.Count == 0)
                 throw new Exception("No downloadable depots found");
+
+            var branchInfo = depotSection["branches"][branch];
+            LastDownloadedBuildId =
+                branchInfo != KeyValue.Invalid ? branchInfo["buildid"]?.Value ?? "" : "";
 
             Log("Getting CDN servers...");
             var allServers = await ContentServerDirectoryService.LoadAsync(

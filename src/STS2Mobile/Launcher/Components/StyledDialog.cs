@@ -10,7 +10,12 @@ public class StyledDialog : ColorRect
     public event Action Confirmed;
     public event Action Cancelled;
 
-    public StyledDialog(string message, float scale)
+    public StyledDialog(
+        string message,
+        float scale,
+        string okLabel = "OK",
+        string cancelLabel = "Cancel"
+    )
     {
         SetAnchorsPreset(LayoutPreset.FullRect);
         Color = new Color(0, 0, 0, 0.6f);
@@ -40,7 +45,7 @@ public class StyledDialog : ColorRect
         buttonRow.Alignment = BoxContainer.AlignmentMode.Center;
         vbox.AddChild(buttonRow);
 
-        var cancelButton = new StyledButton("Cancel", scale, fontSize: 14, height: 44);
+        var cancelButton = new StyledButton(cancelLabel, scale, fontSize: 14, height: 44);
         cancelButton.CustomMinimumSize = new Vector2(
             (int)(120 * scale),
             cancelButton.CustomMinimumSize.Y
@@ -52,7 +57,7 @@ public class StyledDialog : ColorRect
         };
         buttonRow.AddChild(cancelButton);
 
-        var okButton = new StyledButton("OK", scale, fontSize: 14, height: 44);
+        var okButton = new StyledButton(okLabel, scale, fontSize: 14, height: 44);
         okButton.CustomMinimumSize = new Vector2((int)(120 * scale), okButton.CustomMinimumSize.Y);
         okButton.Pressed += () =>
         {

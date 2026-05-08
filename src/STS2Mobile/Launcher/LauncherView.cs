@@ -243,9 +243,15 @@ public class LauncherView
         }
     }
 
-    public void ShowConfirmation(string message, Action onConfirmed, Action onCancelled = null)
+    public void ShowConfirmation(
+        string message,
+        Action onConfirmed,
+        Action onCancelled = null,
+        string okLabel = "OK",
+        string cancelLabel = "Cancel"
+    )
     {
-        var dialog = new StyledDialog(message, _scale);
+        var dialog = new StyledDialog(message, _scale, okLabel, cancelLabel);
         dialog.Confirmed += onConfirmed;
         if (onCancelled != null)
             dialog.Cancelled += onCancelled;

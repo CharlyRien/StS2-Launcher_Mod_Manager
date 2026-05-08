@@ -39,6 +39,12 @@ public static class AppUpdateChecker
         if (rawLatest == null)
             return AppUpdateResult.None;
 
+        // Skip debug-tagged releases (e.g. v0.3.12-debug). These are uploaded
+        // for in-house dialog/UI testing and should never trigger self-update
+        // for end users. The debug tester reaches them via direct sideload.
+        if (rawLatest.IndexOf("-debug", StringComparison.OrdinalIgnoreCase) >= 0)
+            return AppUpdateResult.None;
+
         var latestVersion = NormalizeVersion(rawLatest);
         var installedVersion = NormalizeVersion(currentVersion);
 
@@ -47,6 +53,9 @@ public static class AppUpdateChecker
 
         if (CompareVersions(latestVersion, installedVersion) <= 0)
             return AppUpdateResult.None;
+
+        var releaseBody = root.TryGetProperty("body", out var bodyProp) ? bodyProp.GetString() : null;
+        var releaseNotes = ReleaseNotes.ExtractDialogBody(releaseBody);
 
         string downloadUrl = null;
         if (root.TryGetProperty("assets", out var assets))
@@ -64,7 +73,7 @@ public static class AppUpdateChecker
             }
         }
 
-        return new AppUpdateResult(latestVersion, downloadUrl);
+        return new AppUpdateResult(latestVersion, downloadUrl, releaseNotes);
     }
 
     private static string GetInstalledVersion()
@@ -115,15 +124,17 @@ public static class AppUpdateChecker
 
 public class AppUpdateResult
 {
-    public static readonly AppUpdateResult None = new(null, null);
+    public static readonly AppUpdateResult None = new(null, null, null);
 
     public string LatestVersion { get; }
     public string DownloadUrl { get; }
+    public string ReleaseNotes { get; }
     public bool HasUpdate => LatestVersion != null;
 
-    public AppUpdateResult(string latestVersion, string downloadUrl)
+    public AppUpdateResult(string latestVersion, string downloadUrl, string releaseNotes)
     {
         LatestVersion = latestVersion;
         DownloadUrl = downloadUrl;
+        ReleaseNotes = releaseNotes;
     }
 }

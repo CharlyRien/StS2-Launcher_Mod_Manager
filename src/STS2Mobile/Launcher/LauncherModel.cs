@@ -233,6 +233,7 @@ public class LauncherModel : IDisposable
         try
         {
             await Task.Run(() => _downloader.DownloadAsync(resolvedBranch, _downloadCts.Token));
+            WriteCacheStampAfterDownload(resolvedBranch, _downloader.LastDownloadedBuildId);
             DownloadCompleted?.Invoke();
         }
         catch (OperationCanceledException)
@@ -244,6 +245,26 @@ public class LauncherModel : IDisposable
             DownloadFailed?.Invoke(ex.Message);
             PatchHelper.Log($"[Launcher] Download error: {ex}");
         }
+    }
+
+    // Reads the just-downloaded release_info.json and merges it with the Steam
+    // BuildId into a CacheStamp. Issue #5: a missing or stale stamp is what
+    // makes the next PLAY surface a cache-rebuild prompt, so writing this is
+    // load-bearing — failures here are logged but not fatal to the download.
+    private void WriteCacheStampAfterDownload(string branch, string buildId)
+    {
+        var current = CacheStamp.BuildCurrent();
+        var stamp = new CacheStamp
+        {
+            Branch = current?.Branch ?? branch,
+            BuildId = buildId ?? "",
+            Commit = current?.Commit ?? "",
+            Version = current?.Version ?? "",
+        };
+        stamp.Write();
+        // The fresh download supersedes any pending rebuild request from a
+        // prior WipeGameFiles call — Java sentinel will still fire on this
+        // boot's restart, after which the new stamp is in sync.
     }
 
     public async Task CheckForUpdatesAsync(string branch = null)
@@ -481,7 +502,14 @@ public class LauncherModel : IDisposable
                 Directory.Delete(gameDir, recursive: true);
             if (Directory.Exists(stateDir))
                 Directory.Delete(stateDir, recursive: true);
-            PatchHelper.Log("[Launcher] Game files wiped for branch switch");
+            // Issue #5: wiping just game/ + download_state/ leaves Godot's
+            // import cache (.godot/imported/) from the previous build, which
+            // re-binds card/relic atlas indices to the wrong sprites once the
+            // new PCK lands. Drop the stamp + ask Java to clean .godot/ on the
+            // next boot (mono/ stays — that holds the live .NET assemblies).
+            CacheStamp.Delete();
+            CacheStamp.RequestRebuild();
+            PatchHelper.Log("[Launcher] Game files wiped + cache rebuild requested");
         }
         catch (Exception ex)
         {
