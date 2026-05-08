@@ -38,6 +38,11 @@ public static class LanMultiplayerPatcher
     private static LineEdit _ipLineEdit;
     private static bool _joinInProgress;
 
+    // Maps client netId → display slot (Player2/3/4) in first-seen order.
+    // Cleared at every session boundary so slots restart from 2.
+    private static readonly Dictionary<ulong, int> _slotByNetId = new();
+    private static readonly object _slotLock = new();
+
     public static void Apply(Harmony harmony)
     {
         try
@@ -352,6 +357,7 @@ public static class LanMultiplayerPatcher
             if (__result != null)
                 return;
 
+            ResetSlotMap();
             _beacon?.Stop();
             _beacon = new LanBeacon();
             _beacon.Start();
@@ -366,6 +372,7 @@ public static class LanMultiplayerPatcher
     {
         try
         {
+            ResetSlotMap();
             _beacon?.Stop();
             _beacon = null;
         }
@@ -379,20 +386,47 @@ public static class LanMultiplayerPatcher
     {
         try
         {
-            __result = playerId switch
+            if (playerId == 1uL)
             {
-                1uL => "Player1 (Host)",
-                1000uL => "Player2",
-                1001uL => "Player3",
-                1002uL => "Player4",
-                _ => $"Player{playerId}",
-            };
+                __result = "Player1 (Host)";
+                return false;
+            }
+
+            int slot;
+            lock (_slotLock)
+            {
+                if (!_slotByNetId.TryGetValue(playerId, out slot))
+                {
+                    slot = _slotByNetId.Count + 2; // 2, 3, 4
+                    _slotByNetId[playerId] = slot;
+                }
+            }
+            __result = $"Player{slot}";
             return false;
         }
         catch
         {
             return true; // fall through to original on error
         }
+    }
+
+    private static void ResetSlotMap()
+    {
+        lock (_slotLock)
+            _slotByNetId.Clear();
+    }
+
+    // ENet client connection initializer needs a unique application-level netId
+    // per peer. The game uses SteamID over Steam transport, but on LAN the
+    // launcher chooses it. Hardcoding a single value (the historical 1000UL)
+    // collides when 2+ clients join the same host, so generate a random ID
+    // above the legacy 1000–1002 range.
+    private static ulong GenerateClientNetId()
+    {
+        var bytes = Guid.NewGuid().ToByteArray();
+        ulong raw = BitConverter.ToUInt64(bytes, 0);
+        const ulong floor = 1003UL;
+        return floor + (raw % (ulong.MaxValue - floor));
     }
 
     private static void OnManualJoinPressed(object screen)
@@ -431,13 +465,15 @@ public static class LanMultiplayerPatcher
         _joinInProgress = true;
         try
         {
+            ResetSlotMap();
+            var netId = GenerateClientNetId();
             var connInit = _eNetClientConnInitCtor.Invoke(
-                new object[] { 1000UL, ip, (ushort)port }
+                new object[] { netId, ip, (ushort)port }
             );
             var task = _joinGameAsyncMethod.Invoke(screen, new object[] { connInit });
             _taskHelperRunSafely?.Invoke(null, new object[] { task });
 
-            PatchHelper.Log($"Joining LAN game at {ip}:{port}");
+            PatchHelper.Log($"Joining LAN game at {ip}:{port} as netId={netId}");
         }
         catch (Exception ex)
         {
