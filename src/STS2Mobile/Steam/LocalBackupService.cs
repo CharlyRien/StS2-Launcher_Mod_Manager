@@ -48,7 +48,7 @@ public static class LocalBackupService
     // NOTE: the lead's frozen *message* pasted an async `BackupNowAsync()/SetDir`
     // block, but GAME's actual code calls sync `BackupNow()` and reads
     // TotalBytes/DestPath/NeedsPermission — those two disagree. Matching GAME's live
-    // code is the only thing that makes the build green and honors "GAME은 이미 A".
+    // code is the only thing that makes the build green and honors "GAME is already A".
     // Flagged to the lead to confirm/correct if the async block was intentional.
     // Mutable public fields by design — a plain DTO unpacked by GAME.
     public class BackupResult
@@ -77,7 +77,7 @@ public static class LocalBackupService
                 {
                     Success = false,
                     NeedsPermission = true,
-                    Error = "저장소 권한이 없습니다.",
+                    Error = "Storage permission is not granted.",
                 };
 
             var local = new GodotFileIo(UserDataPathProvider.GetAccountScopedBasePath(null));
@@ -91,7 +91,7 @@ public static class LocalBackupService
                 return new BackupResult
                 {
                     Success = false,
-                    Error = "백업할 세이브가 없습니다.",
+                    Error = "There are no saves to back up.",
                 };
             }
 

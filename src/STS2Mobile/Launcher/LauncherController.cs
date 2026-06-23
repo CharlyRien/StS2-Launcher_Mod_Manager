@@ -23,9 +23,10 @@ public class LauncherController
     private string _lastLaunchText = "LAUNCH";
     private bool _lastShowCloudSync;
     private bool _lastShowUpdate;
-    // Issue #45: OnCheckGameUpdatePressed 의 picked != current 분기 통과 시 true
-    // 로 마킹, DownloadCompleted 콜백에서 소비. true 였다면 NeedsRestartAfterBranchSwitch
-    // set → Play 버튼이 "앱 재시작 필요" 로 분기됨.
+    // Issue #45: marked true when the picked != current branch in
+    // OnCheckGameUpdatePressed; consumed in the DownloadCompleted callback. If it
+    // was true, NeedsRestartAfterBranchSwitch is set → the Play button switches to
+    // "Restart app required".
     private bool _pendingBranchSwitch;
 
     public LauncherController(
@@ -69,8 +70,9 @@ public class LauncherController
             {
                 _view.SetStatus("Download complete! Restart to play.");
                 _view.Download.Visible = false;
-                // Issue #45: 브랜치 전환 직후 다운로드 완료라면 dst dll 과 mismatch
-                // 위험 — Play 가 아니라 명시적 재시작이 유일한 안전 경로.
+                // Issue #45: if the download completes right after a branch switch,
+                // there's a mismatch risk with the dst dll — an explicit restart,
+                // not Play, is the only safe path.
                 if (_pendingBranchSwitch)
                 {
                     _pendingBranchSwitch = false;
@@ -524,9 +526,10 @@ public class LauncherController
                 return;
             }
             _model.WipeGameFiles();
-            // Issue #45: 사용자가 곧 이어 DOWNLOAD 버튼을 누를 것이고, 다운 완료 시
-            // PCK 가 in-process 갱신되어 dst dll 과 mismatch. 다운로드 완료 callback
-            // 이 이 플래그를 보고 NeedsRestartAfterBranchSwitch 를 set 한다.
+            // Issue #45: the user will tap the DOWNLOAD button next, and on
+            // completion the PCK is refreshed in-process, causing a mismatch with the
+            // dst dll. The download-complete callback reads this flag and sets
+            // NeedsRestartAfterBranchSwitch.
             _pendingBranchSwitch = true;
             _runOnMainThread(() =>
             {
@@ -763,12 +766,12 @@ public class LauncherController
     private void ShowAtlasWipeConfirm()
     {
         _view.ShowConfirmation(
-            "이미지 인덱스 캐시 정리\n\n"
-                + "포션 / 카드 / 유물 등 이미지가 잘못 표시될 때 사용하세요.\n"
-                + "게임 텍스처 캐시(약 660개) 를 삭제하고 앱을 재시작합니다.\n\n"
-                + "* 다음 실행이 30~60초 더 걸립니다 (재import)\n"
-                + "* 게임을 다시 다운로드하지 않습니다\n"
-                + "* 세이브 / 진행도 / 로그인 정보는 보존됩니다",
+            "Clear image index cache\n\n"
+                + "Use this when images for potions / cards / relics display incorrectly.\n"
+                + "Deletes the game texture cache (~660 files) and restarts the app.\n\n"
+                + "* The next launch takes 30~60s longer (re-import)\n"
+                + "* The game is not re-downloaded\n"
+                + "* Saves / progress / login info are preserved",
             onConfirmed: () =>
             {
                 try
@@ -835,16 +838,16 @@ public class LauncherController
         {
             AppPaths.RequestStoragePermission();
             _view.ShowConfirmation(
-                "백업하려면 저장공간 접근 권한이 필요합니다.\n권한을 허용한 뒤 다시 시도하세요.",
+                "Storage access permission is required to back up.\nAllow the permission, then try again.",
                 onConfirmed: null,
-                okLabel: "확인",
-                cancelLabel: "닫기"
+                okLabel: "OK",
+                cancelLabel: "Close"
             );
             return;
         }
 
         ShowConfirmation(
-            "현재 세이브 데이터를 로컬에 백업할까요?",
+            "Back up the current save data locally?",
             () =>
             {
                 AppPaths.EnsureExternalDirectories();
@@ -866,10 +869,10 @@ public class LauncherController
                             AppPaths.RequestStoragePermission();
                             _view.AppendLog("Local backup needs storage permission.");
                             _view.ShowConfirmation(
-                                "백업하려면 저장공간 접근 권한이 필요합니다.\n권한을 허용한 뒤 다시 시도하세요.",
+                                "Storage access permission is required to back up.\nAllow the permission, then try again.",
                                 onConfirmed: null,
-                                okLabel: "확인",
-                                cancelLabel: "닫기"
+                                okLabel: "OK",
+                                cancelLabel: "Close"
                             );
                             return;
                         }
@@ -959,9 +962,10 @@ public class LauncherController
 
     private void OnLaunchPressed()
     {
-        // Issue #45: 브랜치 전환으로 PCK in-process 갱신이 있었다면 dst dll 과
-        // mismatch 위험 — Launch 대신 process 종료 (clean exit, recents 에서 사라짐).
-        // 사용자가 launcher 아이콘 재탭 시 GodotApp.setupAssemblies() 새 dll 복사.
+        // Issue #45: if a branch switch refreshed the PCK in-process, there's a
+        // mismatch risk with the dst dll — instead of Launch, terminate the process
+        // (clean exit, disappears from recents). When the user re-taps the launcher
+        // icon, GodotApp.setupAssemblies() copies the new dll.
         if (_model.NeedsRestartAfterBranchSwitch)
         {
             PatchHelper.Log("[Launcher] Restart-required button tapped — exiting app");
@@ -971,12 +975,12 @@ public class LauncherController
         _model.Launch();
     }
 
-    // Issue #45: Play 버튼 라벨은 NeedsRestartAfterBranchSwitch 가 set 이면 한국어
-    // "앱 재시작 필요" 로 강제, 그 외에는 기존 InGameMode 로직 유지.
+    // Issue #45: when NeedsRestartAfterBranchSwitch is set, the Play button label is
+    // forced to "Restart app required"; otherwise the existing InGameMode logic is kept.
     private string ResolveLaunchButtonText()
     {
         if (_model.NeedsRestartAfterBranchSwitch)
-            return "앱 재시작 필요";
+            return "Restart app required";
         return _model.InGameMode ? "PLAY" : "RESTART APP";
     }
 

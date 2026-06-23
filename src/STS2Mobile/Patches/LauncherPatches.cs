@@ -522,7 +522,7 @@ public static class LauncherPatches
         //    to align local mtime with cloud's, otherwise local mtime = NOW
         //    (file write timestamp) and cloud mtime stays at original cloud
         //    value, leaving the next launch with a permanent mtime asymmetry
-        //    that re-triggers conflict and points the "최근" badge at the
+        //    that re-triggers conflict and points the "Most Recent" badge at the
         //    wrong side.
         // 3. After cloud writes (KeepLocal branch), align local mtime to NOW
         //    too — SteamKit2CloudSaveStore.WriteFile sets cloud mtime to NOW

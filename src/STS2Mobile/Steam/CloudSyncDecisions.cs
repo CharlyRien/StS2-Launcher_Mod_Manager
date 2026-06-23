@@ -46,7 +46,7 @@ public class SyncDecisionResult
     // Total number of (profile × modded) slots that differ between local and
     // cloud. The dialog renders only ONE profile's stats but ApplyChosenSide
     // pushes/pulls every diff. This counter lets the dialog flag the rest:
-    // "프로필 3 (외 K개 차이)". 0 when there's no conflict at all.
+    // "Profile 3 (and K more differences)". 0 when there's no conflict at all.
     public int DiffSlotCount { get; init; }
 
     // Drives which side gets visual emphasis ("most recent" highlight). When one

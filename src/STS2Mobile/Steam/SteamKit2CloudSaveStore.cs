@@ -250,11 +250,12 @@ public class SteamKit2CloudSaveStore : ICloudSaveStore, ISaveStore, IDisposable
 
     public bool HasCloudFiles() => _cache.HasCloudFiles();
 
-    // 런처는 LauncherPatches.CloudSyncEnabled==false 면 ConstructDefaultPrefix 에서
-    // SaveManager 를 local-only 로 구성한다. 여기 호출이 들어왔다는 것은 cloud
-    // SaveManager 가 이미 끼워졌다는 뜻이므로 항상 true. false 를 돌리면
-    // SaveManager.ShouldOverwriteCloudWithLocal 가 강제 true 가 되어 로컬을
-    // 클라우드로 덮어쓴다 — issue #4 류 데이터 손실 위험.
+    // When LauncherPatches.CloudSyncEnabled==false, the launcher configures
+    // SaveManager as local-only in ConstructDefaultPrefix. Reaching this call
+    // means the cloud SaveManager is already in place, so it always returns true.
+    // Returning false would force SaveManager.ShouldOverwriteCloudWithLocal to
+    // true, overwriting the cloud copy with the local one — an issue #4-style
+    // data loss risk.
     public bool HasUserEnabledCloudSync() => true;
 
     // The launcher inspects this before deciding whether the cloud-wrapped

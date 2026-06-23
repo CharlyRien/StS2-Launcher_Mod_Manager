@@ -32,8 +32,9 @@ public class LauncherModel : IDisposable
     public volatile bool ConnectionResolved;
     public volatile bool AwaitingCode;
 
-    // Issue #45: 브랜치 전환으로 PCK 가 in-process 갱신되면 dst dll 과 mismatch
-    // — process restart 필요. LauncherUI 가 이걸 보고 Play→Restart 분기.
+    // Issue #45: when a branch switch updates the PCK in-process, it mismatches
+    // the dst dll — a process restart is needed. LauncherUI reads this and
+    // branches Play→Restart.
     internal volatile bool NeedsRestartAfterBranchSwitch;
 
     // True when launched from GameStartupWrapper (game files present). False in
@@ -253,9 +254,10 @@ public class LauncherModel : IDisposable
     }
 
     // Reads the just-downloaded release_info.json and writes a CacheStamp.
-    // v0.3.18 cleanup: sentinel/.godot rebuild 흐름 제거 후 stamp 는 메타데이터
-    // (진단/향후 재활용) 로만 유지. 실제 issue #5 fix 는 GodotApp.setupAssemblies
-    // 의 BCL/game-dll size+mtime 비교로 자동 동기화됨.
+    // v0.3.18 cleanup: after removing the sentinel/.godot rebuild flow, the stamp
+    // is kept only as metadata (for diagnostics / future reuse). The actual
+    // issue #5 fix syncs automatically via the BCL/game-dll size+mtime comparison
+    // in GodotApp.setupAssemblies.
     private void WriteCacheStampAfterDownload(string branch, string buildId)
     {
         string commit = "";
@@ -501,7 +503,7 @@ public class LauncherModel : IDisposable
                 Directory.Delete(gameDir, recursive: true);
             if (Directory.Exists(stateDir))
                 Directory.Delete(stateDir, recursive: true);
-            // 다음 다운로드에서 새 stamp 가 작성되도록 기존 stamp 도 함께 삭제.
+            // Also delete the existing stamp so a fresh one is written on the next download.
             CacheStamp.Delete();
             PatchHelper.Log("[Launcher] Game files wiped");
         }

@@ -1,502 +1,502 @@
-# StS2 Launcher Mod 사용설명서
+# StS2 Launcher Mod User Guide
 
-처음 설치하는 사용자를 위한 단계별 가이드입니다. 각 단계마다 폰 화면이 어떻게 보이는지 스크린샷과 함께 설명합니다.
+A step-by-step guide for first-time users. Each step is explained with screenshots showing how the phone screen looks.
 
-> **검증된 환경**: Galaxy Z Fold7 (메인 + 커버 화면 양쪽). 다른 폼팩터 (태블릿 등) 는 [이슈 #6](https://github.com/iunius612/StS2-Launcher_Mod_Manager/issues/6) 참조.
-
----
-
-## 목차
-
-1. [APK 다운로드 + 설치](#1-apk-다운로드--설치)
-2. [첫 실행 — 권한 부여](#2-첫-실행--권한-부여)
-3. [Steam 로그인](#3-steam-로그인)
-4. [브랜치 선택 + 게임 다운로드](#4-브랜치-선택--게임-다운로드)
-5. [런처 메인 화면 한눈에 보기](#5-런처-메인-화면-한눈에-보기)
-6. [게임 실행 (PLAY)](#6-게임-실행-play)
-7. [게임 업데이트 / 브랜치 변경 (CHECK GAME UPDATE)](#7-게임-업데이트--브랜치-변경-check-game-update)
-8. [Auto Sync 토글](#8-auto-sync-토글)
-9. [Save Manager 다이얼로그 사용법](#9-save-manager-다이얼로그-사용법)
-10. [수동 Push / Pull](#10-수동-push--pull)
-11. [Local Backup (세이브 백업)](#11-local-backup-세이브-백업)
-12. [모드 설치 (선택)](#12-모드-설치-선택)
-13. [런처 자동 업데이트 (CHECK LAUNCHER UPDATE)](#13-런처-자동-업데이트-check-launcher-update)
-14. [디버그 로그 (Debug 토글)](#14-디버그-로그-debug-토글)
-15. [자주 묻는 질문 (FAQ)](#15-자주-묻는-질문-faq)
-16. [알려진 문제 / 미지원 환경](#16-알려진-문제--미지원-환경)
+> **Verified environment**: Galaxy Z Fold7 (both the main and cover screens). For other form factors (tablets, etc.) see [issue #6](https://github.com/iunius612/StS2-Launcher_Mod_Manager/issues/6).
 
 ---
 
-## 1. APK 다운로드 + 설치
+## Table of Contents
 
-[Releases 페이지](https://github.com/iunius612/StS2-Launcher_Mod_Manager/releases/latest) 에서 가장 최신 버전의 `StS2Launcher-vX.Y.Z.apk` 파일을 폰으로 다운로드합니다.
+1. [APK Download + Install](#1-apk-download--install)
+2. [First Launch — Granting Permissions](#2-first-launch--granting-permissions)
+3. [Steam Login](#3-steam-login)
+4. [Branch Selection + Game Download](#4-branch-selection--game-download)
+5. [Main Launcher Screen at a Glance](#5-main-launcher-screen-at-a-glance)
+6. [Launching the Game (PLAY)](#6-launching-the-game-play)
+7. [Game Update / Branch Change (CHECK GAME UPDATE)](#7-game-update--branch-change-check-game-update)
+8. [Auto Sync Toggle](#8-auto-sync-toggle)
+9. [How to Use the Save Manager Dialog](#9-how-to-use-the-save-manager-dialog)
+10. [Manual Push / Pull](#10-manual-push--pull)
+11. [Local Backup (Save Backup)](#11-local-backup-save-backup)
+12. [Installing Mods (Optional)](#12-installing-mods-optional)
+13. [Launcher Auto-Update (CHECK LAUNCHER UPDATE)](#13-launcher-auto-update-check-launcher-update)
+14. [Debug Logs (Debug Toggle)](#14-debug-logs-debug-toggle)
+15. [Frequently Asked Questions (FAQ)](#15-frequently-asked-questions-faq)
+16. [Known Issues / Unsupported Environments](#16-known-issues--unsupported-environments)
+
+---
+
+## 1. APK Download + Install
+
+Download the latest `StS2Launcher-vX.Y.Z.apk` file to your phone from the [Releases page](https://github.com/iunius612/StS2-Launcher_Mod_Manager/releases/latest).
 
   <img src="images/1.jpg" width="600">
 
-설치 시 **"출처를 알 수 없는 앱"** 허용이 필요할 수 있습니다. 폰 브라우저나 파일 매니저가 처음 APK 를 설치할 때 한 번씩 권한 요청 다이얼로그가 뜹니다.
+Installation may require allowing **"apps from unknown sources"**. The first time your phone browser or file manager installs an APK, a permission request dialog will appear once.
 
   <img src="images/2.jpg" width="600">
 
-> **업그레이드 시**: 같은 keystore 로 서명된 빌드를 위에 덮어 설치하면 saves / Steam 로그인 / 게임 페이로드 (~3GB) 모두 보존됩니다. 0.3.x → 0.3.2 같은 마이너 업그레이드는 데이터 그대로.
+> **When upgrading**: If you install a build signed with the same keystore over the top, your saves / Steam login / game payload (~3GB) are all preserved. Minor upgrades like 0.3.x → 0.3.2 keep your data intact.
 
 ---
 
-## 2. 첫 실행 — 권한 부여
+## 2. First Launch — Granting Permissions
 
-런처를 처음 실행하면 **"모든 파일 액세스 (All Files Access)"** 권한 요청 다이얼로그가 뜹니다.
+When you launch the launcher for the first time, an **"All Files Access"** permission request dialog appears.
 
   <img src="images/3.jpg" width="600">
 
-이 권한이 필요한 이유는:
-- 모드 폴더 (`/storage/emulated/0/StS2LauncherMM/Mods/`) 에 사용자가 직접 모드를 넣을 수 있어야 하고,
-- Local Backup (세이브 백업) 이 외부 저장공간에 세이브 스냅샷을 저장하려면 외부 storage 쓰기 권한이 필요합니다.
+This permission is needed because:
+- you need to be able to drop mods directly into the mods folder (`/storage/emulated/0/StS2LauncherMM/Mods/`), and
+- Local Backup (save backup) requires external storage write permission to store save snapshots on external storage.
 
-권한 부여 화면에서 토글을 켜고 뒤로가기를 누르면 런처로 복귀합니다.
+On the permission grant screen, turn the toggle on and press back to return to the launcher.
 
   <img src="images/4.jpg" width="600">
 
 ---
 
-## 3. Steam 로그인
+## 3. Steam Login
 
-런처 화면에서 Steam 로그인 안내가 표시되면 본인의 Steam 계정 정보를 입력합니다.
+When the Steam login prompt appears on the launcher screen, enter your own Steam account credentials.
 
   <img src="images/5.jpg" width="600">
 
-### ⚠️ Steam Guard 2FA 주의사항
+### ⚠️ Steam Guard 2FA Caution
 
-2단계 인증 코드를 받기 위해 다른 앱 (Steam 모바일 앱 등) 으로 전환하면 **인증 세션이 약 5~10 초만 백그라운드에 있어도 fail 처리**됩니다. 처음부터 다시 입력해야 함.
+If you switch to another app (the Steam mobile app, etc.) to receive your two-factor authentication code, **the auth session will fail even if it spends only about 5–10 seconds in the background**. You will have to enter everything from the start again.
 
   <img src="images/6.jpg" width="600">
 
-**대처법**:
-- **팝업/포커스 모드**: Steam 모바일 앱을 팝업 창으로 띄워서 코드를 확인 → 즉시 런처를 다시 터치해 포커스 유지.
-- **분할 화면**: 런처와 Steam 앱을 동시에 띄워서 한쪽 보고 다른 쪽 입력.
+**Workarounds**:
+- **Popup/focus mode**: Open the Steam mobile app in a popup window to check the code → immediately tap the launcher again to keep focus.
+- **Split screen**: Show the launcher and the Steam app at the same time, reading one and entering into the other.
 
   <img src="images/7.jpg" width="600">
 
 ---
 
-## 4. 브랜치 선택 + 게임 다운로드
+## 4. Branch Selection + Game Download
 
-로그인 성공 후 게임 파일이 없는 상태라면 **브랜치 선택 화면**이 표시됩니다.
+After a successful login, if there are no game files yet, the **branch selection screen** is displayed.
 
   <img src="images/8.jpg" width="600">
 
-> **PC 와 같은 브랜치를 선택하세요.** 모바일에서 베타 브랜치 진행도를 PC 의 일반 브랜치로 가져갈 수 없고, 그 반대도 마찬가지입니다 (Steam Cloud sync 충돌 발생). 자세한 내용은 FAQ 참조.
+> **Select the same branch as your PC.** You cannot bring beta branch progress from mobile into the regular branch on PC, and vice versa (Steam Cloud sync conflicts occur). See the FAQ for details.
 
-브랜치를 고르고 다운로드 버튼을 누르면 약 **3GB** 의 게임 파일이 다운로드됩니다. 와이파이 권장.
+Pick a branch and press the download button to download about **3GB** of game files. Wi-Fi recommended.
 
   <img src="images/9.jpg" width="600">
 
 ---
 
-## 5. 런처 메인 화면 한눈에 보기
+## 5. Main Launcher Screen at a Glance
 
-다운로드 완료 후 보이는 메인 런처 화면입니다. 각 영역 기능을 한 줄로 정리하고, 자세한 사용은 아래 섹션에서 다룹니다.
+This is the main launcher screen you see after the download completes. Each area's function is summarized in a single line, with detailed usage covered in the sections below.
 
   <img src="images/10.jpg" width="600">
 
-| 영역 | 기능 | 자세한 사용 |
+| Area | Function | Details |
 |---|---|---|
-| **PLAY** 버튼 | 게임 실행. 이걸 누르면 Steam Cloud 와 진행도 동기화 검증 후 게임 본체 진입 | [6번](#6-게임-실행-play) |
-| **CHECK GAME UPDATE** 버튼 | 게임 업데이트 확인 + **브랜치 변경** (0.3.4 부터 CHECK FOR UPDATES 가 게임/런처 두 개로 분리됨) | [7번](#7-게임-업데이트--브랜치-변경-check-game-update) |
-| **CHECK LAUNCHER UPDATE** 버튼 | 런처 APK 새 버전이 GitHub 에 있는지 확인 + 인앱 다운로드 / 설치 | [13번](#13-런처-자동-업데이트-check-launcher-update) |
-| **Auto Sync** 토글 | Steam Cloud 와의 자동 동기화 ON/OFF | [8번](#8-auto-sync-토글) |
-| **SAVE MANAGER** 버튼 | 현재 sync 상태 확인 + 강제 재sync 다이얼로그. cloud / local 비교 + 수동 결정 | [9번](#9-save-manager-다이얼로그-사용법) |
-| **Push** 버튼 | 모든 saves 를 Steam Cloud 로 강제 업로드 (특수 상황용) | [10번](#10-수동-push--pull) |
-| **Pull** 버튼 | Steam Cloud 의 모든 saves 를 폰으로 강제 다운로드 (특수 상황용) | [10번](#10-수동-push--pull) |
-| **Local Backup** 버튼 | 누르면 현재 세이브 트리 전체를 외부 저장공간에 스냅샷으로 백업 (수동). PLAY 시 핸드셰이크에서도 자동 백업 | [11번](#11-local-backup-세이브-백업) |
-| **Debug** 토글 (Console 옆) | logcat 캡처를 외부 저장공간에 저장 (기본 ON, 부팅부터 게임 진입까지 전체 로그) | [14번](#14-디버그-로그-debug-토글) |
+| **PLAY** button | Launches the game. Pressing this enters the game proper after verifying progress sync with Steam Cloud | [Section 6](#6-launching-the-game-play) |
+| **CHECK GAME UPDATE** button | Check for game updates + **change branch** (from 0.3.4, CHECK FOR UPDATES was split into separate game/launcher buttons) | [Section 7](#7-game-update--branch-change-check-game-update) |
+| **CHECK LAUNCHER UPDATE** button | Check whether a new launcher APK version is on GitHub + in-app download / install | [Section 13](#13-launcher-auto-update-check-launcher-update) |
+| **Auto Sync** toggle | Turns automatic sync with Steam Cloud ON/OFF | [Section 8](#8-auto-sync-toggle) |
+| **SAVE MANAGER** button | Check the current sync state + force re-sync dialog. Compares cloud / local + lets you decide manually | [Section 9](#9-how-to-use-the-save-manager-dialog) |
+| **Push** button | Force-upload all saves to Steam Cloud (for special situations) | [Section 10](#10-manual-push--pull) |
+| **Pull** button | Force-download all saves from Steam Cloud to the phone (for special situations) | [Section 10](#10-manual-push--pull) |
+| **Local Backup** button | Pressing this snapshots the entire current save tree to external storage as a backup (manual). It is also backed up automatically during the PLAY handshake | [Section 11](#11-local-backup-save-backup) |
+| **Debug** toggle (next to Console) | Saves logcat capture to external storage (default ON, full log from boot to game entry) | [Section 14](#14-debug-logs-debug-toggle) |
 
-> 모드 매니저 버튼은 0.3.0 부터 위 SAVE MANAGER 로 변경됐습니다. 모드 설치는 외부 파일 매니저로 진행 — [12번](#12-모드-설치-선택) 참조.
+> The mod manager button was changed to the SAVE MANAGER above starting in 0.3.0. Mod installation is done with an external file manager — see [Section 12](#12-installing-mods-optional).
 
 ---
 
-## 6. 게임 실행 (PLAY)
+## 6. Launching the Game (PLAY)
 
-런처 화면에서 PLAY 를 누르면 **Steam Cloud 와의 진행도 동기화 검증**이 먼저 진행됩니다.
-잠시 검은화면이 출력 되지만, save manager가 클라우드에서 파일을 다운로드 받는 것이므로 기다려주세요.
-(30초 ~ 1분 초과 시 네트워크 연결 지연 등, 버그 의심)
+When you press PLAY on the launcher screen, **progress sync verification with Steam Cloud** runs first.
+A black screen is shown briefly, but please wait — the save manager is downloading files from the cloud.
+(If it exceeds 30 seconds to 1 minute, suspect a network connection delay or a bug.)
 
   <img src="images/11.jpg" width="600">
 
-검증 결과에 따라 다음 중 하나가 발생:
+Depending on the verification result, one of the following happens:
 
-- **양쪽 진행도 일치 또는 데이터 없음**: 즉시 게임 메인메뉴로 진입 (다이얼로그 안 뜸).
-- **한쪽에만 진행도 있음 또는 양쪽 다름**: **Save Manager 다이얼로그**가 자동으로 표시됨 → [9번](#9-save-manager-다이얼로그-사용법) 참조.
+- **Both sides' progress matches, or there is no data**: Enters the game main menu immediately (no dialog appears).
+- **Progress exists on only one side, or the two sides differ**: The **Save Manager dialog** is shown automatically → see [Section 9](#9-how-to-use-the-save-manager-dialog).
 
-이후 첫 실행 시 게임 내 쉐이더 스캐닝 및 압축해제 가 진행 됩니다.
+After this, on first launch, in-game shader scanning and decompression run.
 
   <img src="images/12.jpg" width="600">
 
 
-쉐이더 업데이트가 끝나면 잠시 후 런처 메인화면으로 복귀합니다.
+Once the shader update finishes, the screen returns to the launcher main screen after a moment.
 
-이후 게임 본체에 진입하면 일반적인 Slay the Spire 2 플레이 흐름과 동일.
+After that, entering the game proper follows the normal Slay the Spire 2 play flow.
 
-> 게임 종료 시 (게임 메뉴 → Quit) launcher 가 cloud 큐가 비워질 때까지 (최대 5분, 보통 1~5초) 기다립니다. 이 동안 process 는 백그라운드에 살아있고 Steam 네트워크 트래픽이 잠깐 보일 수 있음 — 정상 동작.
+> When quitting the game (game menu → Quit), the launcher waits until the cloud queue is empty (up to 5 minutes, usually 1–5 seconds). During this time the process stays alive in the background and you may briefly see Steam network traffic — this is normal behavior.
 
 ---
 
-## 7. 게임 업데이트 / 브랜치 변경 (CHECK GAME UPDATE)
+## 7. Game Update / Branch Change (CHECK GAME UPDATE)
 
-> **0.3.4 부터 변경**: 기존 `CHECK FOR UPDATES` 버튼은 게임 manifest 비교와 런처 APK 버전 비교를 한 번에 하고 결과 표시도 게임 쪽만 큰 상태 표시였습니다. 이제 두 흐름이 완전히 분리되어 **`CHECK GAME UPDATE`** (이 섹션) 와 **`CHECK LAUNCHER UPDATE`** ([13번](#13-런처-자동-업데이트-check-launcher-update)) 가 각자의 버튼 / 결과 / 다이얼로그를 가집니다.
+> **Changed from 0.3.4**: The old `CHECK FOR UPDATES` button did both the game manifest comparison and the launcher APK version comparison at once, and the result display was just a large status indicator on the game side. Now the two flows are fully separated, with **`CHECK GAME UPDATE`** (this section) and **`CHECK LAUNCHER UPDATE`** ([Section 13](#13-launcher-auto-update-check-launcher-update)) each having their own button / result / dialog.
 
-이미 게임을 다운로드한 상태라도 **CHECK GAME UPDATE** 버튼을 누르면 브랜치 선택 화면이 다시 열립니다. 다른 브랜치 (예: `public` → `public-beta`) 로 갈아타고 싶을 때 사용.
+Even if you have already downloaded the game, pressing the **CHECK GAME UPDATE** button reopens the branch selection screen. Use it when you want to switch to a different branch (e.g. `public` → `public-beta`).
 
   <img src="images/13.jpg" width="600">
 
-### 브랜치 변경 시 주의사항
+### Cautions When Changing Branches
 
-- **새 브랜치는 풀 재다운로드** (~3GB). delta 다운로드 사용 안 함 — 브랜치 간 binary 차이가 byte 단위로 호환되지 않을 수 있어 의도적으로 처음부터 다시 받음.
-- **saves / Steam 로그인 / 모드 설정은 보존**됩니다. 게임 파일 (`game/`, `download_state/`) 만 새로 받음.
-- **PC 와 브랜치를 일치시키세요** — 다른 브랜치끼리는 Steam Cloud sync 가 충돌할 수 있음. [FAQ](#13-자주-묻는-질문-faq) 의 브랜치 일치 항목 참조.
+- **A new branch is a full re-download** (~3GB). Delta download is not used — binary differences between branches may not be byte-compatible, so it intentionally re-downloads from scratch.
+- **Saves / Steam login / mod settings are preserved.** Only the game files (`game/`, `download_state/`) are downloaded anew.
+- **Match the branch with your PC** — different branches can cause Steam Cloud sync conflicts. See the branch-matching item in the [FAQ](#13-frequently-asked-questions-faq).
 
-### 이미지 인덱스 깨짐 회복 — 이미지 캐시 정리 (v0.3.19+)
+### Recovering from Broken Image Indices — Clearing the Image Cache (v0.3.19+)
 
-게임 업데이트 후 **카드 / 유물 / 포션** 등의 아이콘이 다른 이미지로 잘못 표시되는 경우, 모바일용 텍스처 캐시 (ETC2 압축본) 가 옛 빌드 기준으로 남아 있어 발생합니다. v0.3.19 부터는 두 가지 회복 경로를 제공합니다.
+If, after a game update, icons for **cards / relics / potions** etc. are incorrectly displayed as different images, it is because the mobile texture cache (ETC2-compressed copy) remains based on the old build. From v0.3.19, two recovery paths are provided.
 
-**자동 (대부분의 케이스에서 사용자 개입 불필요)**
+**Automatic (no user intervention needed in most cases)**
 
   <img src="images/29.jpg" width="600">
 
-게임 업데이트 (PCK 파일 갱신) 가 감지되면 다음 앱 실행 시 자동으로 텍스처 캐시를 재생성합니다. 한국어 로딩 화면 ("이미지 인덱스 캐시를 다시 만드는 중입니다") 이 30~60초 표시되며, 끝나면 정상 진입합니다. 세이브 / 진행도 / 로그인 정보는 모두 보존됩니다.
+When a game update (PCK file refresh) is detected, the texture cache is automatically regenerated on the next app launch. A Korean loading screen ("Rebuilding the image index cache") is shown for 30–60 seconds, and once it finishes, the app enters normally. Saves / progress / login info are all preserved.
 
   <img src="images/30.jpg" width="600">
 
-**수동 — `이미지 캐시 정리` 버튼**
+**Manual — the `Clear Image Cache` button**
 
   <img src="images/31.jpg" width="600">
   
-자동 감지가 missed 됐거나 명시적으로 다시 정리하고 싶을 때 사용:
+Use this when auto-detection was missed or you want to explicitly clear it again:
 
-1. 메인 화면의 **CHECK GAME UPDATE** 누름
-2. 브랜치 선택 다이얼로그 **우측 하단** 에 작은 회색 **`이미지 캐시 정리`** 버튼
-3. 누르면 한국어 확인 다이얼로그 (작업 내용 + 30~60초 안내 + 보존 항목 명시) 표시
-4. **OK** → 앱 자동 재시작 → 위 자동 흐름과 동일한 로딩 화면 후 정상 진입
+1. Press **CHECK GAME UPDATE** on the main screen
+2. There is a small gray **`Clear Image Cache`** button at the **bottom right** of the branch selection dialog
+3. Pressing it shows a Korean confirmation dialog (describing the operation + a 30–60 second notice + what is preserved)
+4. **OK** → the app restarts automatically → after the same loading screen as the auto flow above, it enters normally
 
-**보존 vs 재생성:**
+**Preserved vs. Regenerated:**
 
-| 항목 | 동작 |
+| Item | Behavior |
 |---|---|
-| 게임 PCK / 다운로드 데이터 (`game/`, `download_state/`) | **보존** — 재다운로드 없음 |
-| 세이브 / 진행도 (`steam/<userId>/...`) | **보존** |
-| Steam 로그인 / Auto Sync 설정 | **보존** |
-| Local Backup 스냅샷 (`StS2LauncherMM/Saves/`) | **보존** — 외부 저장공간이라 앱 캐시 정리와 무관 |
-| 모바일용 텍스처 캐시 (`etc2_cache/.godot/imported/`) | **재생성** (~30~60초) |
+| Game PCK / download data (`game/`, `download_state/`) | **Preserved** — no re-download |
+| Saves / progress (`steam/<userId>/...`) | **Preserved** |
+| Steam login / Auto Sync settings | **Preserved** |
+| Local Backup snapshots (`StS2LauncherMM/Saves/`) | **Preserved** — on external storage, unaffected by clearing the app cache |
+| Mobile texture cache (`etc2_cache/.godot/imported/`) | **Regenerated** (~30–60 seconds) |
 
-자동 흐름 도입 전 회복 방법이었던 "앱 데이터 삭제 후 재설치" 와 동등한 효과를 게임 재다운로드 없이 30초로 처리합니다. 자세한 내용은 [issue #23](https://github.com/iunius612/StS2-Launcher_Mod_Manager/issues/23) 참조.
+It achieves the same effect as the pre-auto-flow recovery method of "clearing app data then reinstalling," handled in 30 seconds without re-downloading the game. See [issue #23](https://github.com/iunius612/StS2-Launcher_Mod_Manager/issues/23) for details.
 
 ---
 
-## 8. Auto Sync 토글
+## 8. Auto Sync Toggle
 
-런처 메인 화면의 **Auto Sync: ON / OFF** 토글로 Steam Cloud 자동 동기화를 끄거나 켤 수 있습니다.
+The **Auto Sync: ON / OFF** toggle on the launcher main screen lets you turn Steam Cloud automatic sync off or on.
 
   <img src="images/14.jpg" width="600">
 
-| 상태 | 동작 |
+| State | Behavior |
 |---|---|
-| **Auto Sync: ON** (기본) | 게임 진행 중 saves 가 Steam Cloud 로 자동 push, 다음 PLAY 시 자동 검증 다이얼로그 |
-| **Auto Sync: OFF** | cloud 와 격리됨. 모바일 local 에만 saves 저장. 다른 디바이스 (PC 등) 와 진행도 동기화 안 됨 |
+| **Auto Sync: ON** (default) | Saves are automatically pushed to Steam Cloud during play, with an automatic verification dialog on the next PLAY |
+| **Auto Sync: OFF** | Isolated from the cloud. Saves are stored only in mobile local. Progress does not sync with other devices (PC, etc.) |
 
-### 언제 OFF 로 두나?
+### When to Leave It OFF?
 
-거의 항상 ON 권장. OFF 가 필요한 특수 상황:
+Almost always keep it ON. Special situations where OFF is needed:
 
-- **임시 디버깅**: cloud 측 sync 가 의심스러울 때 OFF 로 두고 모바일 local 만 진행 → 그 후 다시 ON 으로 돌리고 Save Manager 로 정확한 결정.
-- **PC 와 의도적으로 다른 진행을 원할 때**: 모바일에서 별도 캐릭터/런 진행하고 PC 는 따로 두고 싶을 때. 다만 다음에 ON 하면 conflict 다이얼로그가 뜨므로 그때 결정 필요.
+- **Temporary debugging**: When cloud-side sync is suspect, leave it OFF and proceed with only the mobile local copy → then turn it back ON and make an accurate decision via the Save Manager.
+- **When you intentionally want different progress from PC**: When you want to progress a separate character/run on mobile and keep the PC separate. Note that the next time you turn it ON, a conflict dialog will appear, and you'll need to decide then.
 
-OFF 였다가 다시 ON 하면 **Save Manager 가 자동으로 conflict 검출**해 어느 쪽을 유지할지 묻습니다 — 다음 PLAY 시점에 다이얼로그가 뜸.
+If you turn it ON again after it was OFF, the **Save Manager automatically detects the conflict** and asks which side to keep — the dialog appears at the next PLAY.
 
 ---
 
-## 9. Save Manager 다이얼로그 사용법
+## 9. How to Use the Save Manager Dialog
 
-Steam Cloud 와 폰 사이에 진행도 차이가 감지되면 다이얼로그가 자동으로 표시됩니다. 또는 런처 화면에서 **SAVE MANAGER** 버튼을 직접 탭하면 언제든지 현재 sync 상태를 확인할 수 있습니다.
+When a progress difference is detected between Steam Cloud and the phone, the dialog is displayed automatically. Alternatively, tapping the **SAVE MANAGER** button directly on the launcher screen lets you check the current sync state at any time.
 
-### 다이얼로그 구성
+### Dialog Layout
 
-각 카드는 한 프로필의 진행도 정보를 보여줍니다.
+Each card shows the progress information for one profile.
 
-| 항목 | 의미 |
+| Item | Meaning |
 |---|---|
-| **프로필 N** (부제) | 카드가 어느 프로필 데이터인지 (1, 2, 3 또는 모드 프로필) |
-| **최근** 배지 | 두 카드 중 더 최근에 변경된 쪽 (progress.save 와 current_run.save 의 mtime 중 newer) |
-| **파일 생성 시간 / 파일 크기** | progress.save 의 mtime / 사이즈 |
-| **총 플레이타임** | 누적 플레이 시간 |
-| **현재 진행** | 진행 중 런이 있다면 `1막 3층` 같이 표시. 없으면 `—` |
-| **전적 / 최고 승천 / 올라간 층 / 발견 유물** | progress.save 의 누적 통계 |
+| **Profile N** (subtitle) | Which profile's data the card is for (1, 2, 3, or a mod profile) |
+| **Recent** badge | The side that was changed more recently of the two cards (the newer of the mtimes of progress.save and current_run.save) |
+| **File creation time / File size** | The mtime / size of progress.save |
+| **Total playtime** | Accumulated play time |
+| **Current progress** | If there is a run in progress, shows it like `Act 1 Floor 3`. If none, `—` |
+| **Record / Highest ascension / Floors climbed / Relics discovered** | Accumulated statistics from progress.save |
 
-### 상황별 다이얼로그 모습
+### Dialog Appearance by Situation
 
-#### 상황 1 — 다름 (conflict)
+#### Situation 1 — Different (conflict)
 
-본문 "진행도가 다릅니다" + 두 카드 + **취소 / 로컬 유지 / 클라우드 유지** 버튼. 다중 프로필이 동시에 다르면 본문에 `(N개 프로필)` 표시.
+Body "Progress differs" + two cards + **Cancel / Keep Local / Keep Cloud** buttons. If multiple profiles differ at the same time, the body shows `(N profiles)`.
 
   <img src="images/15.jpg" width="600">
 
-### 어느 쪽을 유지할지 결정 가이드
+### Guide to Deciding Which Side to Keep
 
-다이얼로그가 자동으로 더 newer 쪽 버튼을 강조 표시합니다 ("최근" 배지가 붙은 카드의 유지 버튼). 일반적인 결정 흐름:
+The dialog automatically highlights the button for the newer side (the Keep button on the card with the "Recent" badge). A typical decision flow:
 
-| 상황 | 선택 |
+| Situation | Choice |
 |---|---|
-| 모바일에서 방금 진행 → 다른 디바이스에 전달하려면 | **로컬 유지** |
-| PC 에서 진행 후 모바일로 가져오려면 | **클라우드 유지** |
-| 헷갈리면 | **취소** → 그 세션 cloud sync OFF, 다음 시작 시 다시 결정 가능 |
+| Just progressed on mobile → want to pass it to another device | **Keep Local** |
+| Progressed on PC and want to bring it to mobile | **Keep Cloud** |
+| If unsure | **Cancel** → cloud sync OFF for that session, can decide again at the next start |
 
-> **확신이 없을 때 안전하게**: "현재 진행" 행을 보세요. 두 카드 중 진행 중 런이 있는 쪽 또는 더 진행된 쪽 (예: 1막 5층 vs 1막 3층) 이 보통 사용자가 잃고 싶지 않은 데이터입니다.
+> **To be safe when uncertain**: Look at the "Current progress" row. Of the two cards, the side that has a run in progress, or the more advanced one (e.g. Act 1 Floor 5 vs Act 1 Floor 3), is usually the data you don't want to lose.
 
-#### 상황 2 — 양쪽 동일 (Identical)
+#### Situation 2 — Both Identical
 
-두 카드의 사이즈/통계/현재 진행이 모두 같음. 본문 "일치합니다, 별도 작업이 필요하지 않습니다" + 닫기 버튼.
+The two cards' size/stats/current progress are all the same. Body "They match; no separate action is needed" + Close button.
 
   <img src="images/16.jpg" width="600">
 
 ---
 
-## 10. 수동 Push / Pull
+## 10. Manual Push / Pull
 
-런처 Actions 영역의 **Push** / **Pull** 버튼은 강제 동기화 도구입니다. **일반적인 사용에서는 권장하지 않습니다** — cloud 동기화는 게임 종료/실행 시 자동으로 처리되고, 자동 sync 가 깨지면 Save Manager 가 정확한 결정 옵션을 제공하기 때문.
+The **Push** / **Pull** buttons in the launcher's Actions area are force-sync tools. **They are not recommended for normal use** — cloud sync is handled automatically when the game quits/launches, and if auto-sync breaks, the Save Manager provides accurate decision options.
 
   <img src="images/17.jpg" width="600">
 
-| 버튼 | 동작 |
+| Button | Behavior |
 |---|---|
-| **Push** | 모바일 local 의 모든 saves (progress + current_run + history `.run` + prefs + settings × 모든 프로필) 를 Steam Cloud 로 강제 업로드 |
-| **Pull** | Steam Cloud 의 모든 saves 를 모바일 local 로 강제 다운로드 |
+| **Push** | Force-uploads all of mobile local's saves (progress + current_run + history `.run` + prefs + settings × all profiles) to Steam Cloud |
+| **Pull** | Force-downloads all of Steam Cloud's saves to mobile local |
 
-### 언제 사용하나?
+### When to Use?
 
-특수 상황 한정:
+For special situations only:
 
-- **Save Manager 가 어떤 이유로 작동 안 함** (다이얼로그 응답 없음 등) — 강제로 한쪽 방향 sync 가 필요할 때.
-- **PC 에서 진행 후 모바일로 옮길 때** Save Manager 가 자동 처리하지만, 명시적으로 한 번에 받고 싶으면 Pull.
+- **When the Save Manager doesn't work for some reason** (dialog unresponsive, etc.) — when you need to force a one-direction sync.
+- **When moving from PC to mobile after progressing**, the Save Manager handles it automatically, but if you want to explicitly fetch it all at once, use Pull.
 
-> 일반 사용은 **PLAY 시점의 자동 검증 + Save Manager 다이얼로그** 흐름으로 충분합니다.
+> Normal use is well served by the **automatic verification at PLAY + Save Manager dialog** flow.
 
 ---
 
-## 11. Local Backup (세이브 백업)
+## 11. Local Backup (Save Backup)
 
-세이브가 잘못 덮어써졌을 때 되돌릴 수 있도록, 세이브 데이터 전체를 **원래 폴더 구조 그대로** 외부 저장공간에 복사해 둡니다. 백업은 두 방식으로 만들어집니다.
+So that you can roll back when a save is wrongly overwritten, the entire save data is copied to external storage **keeping the original folder structure**. Backups are made in two ways.
 
-- **수동 백업** — 런처 Actions 영역의 **Local Backup** 버튼을 누르면, 확인 다이얼로그 → (확인 시) 현재 세이브 트리 전체를 한 번에 스냅샷합니다. 완료되면 백업된 파일 수 · 총 크기 · 저장 위치를 결과 다이얼로그로 보여줍니다.
+- **Manual backup** — When you press the **Local Backup** button in the launcher's Actions area, a confirmation dialog appears → (on confirm) it snapshots the entire current save tree at once. When done, it shows the number of backed-up files, total size, and storage location in a result dialog.
 
   <img src="images/18.jpg" width="600">
 
-- **자동 백업** — PLAY 를 누를 때 진행되는 Steam Cloud 핸드셰이크에서 launch 당 1회 자동으로 만들어집니다. 로컬과 클라우드가 일치하면 로컬 트리를 1벌 스냅샷하고, 충돌이 나면 **유지하는 쪽(kept)** 과 **버려지는 쪽(discarded)** 을 둘 다 백업합니다(잘못 선택해도 버려진 데이터를 되찾을 수 있도록).
+- **Automatic backup** — Created automatically once per launch during the Steam Cloud handshake that runs when you press PLAY. If local and cloud match, it snapshots one copy of the local tree; if there is a conflict, it backs up both the **kept** side and the **discarded** side (so you can recover the discarded data even if you choose wrongly).
 
-> 백업 파일명은 **변형하지 않습니다** (`.bak` 같은 꼬리표 없음). 원본 파일명·폴더 구조 그대로 복사되므로, 복원은 해당 파일을 원래 위치로 도로 복사하기만 하면 됩니다.
+> Backup filenames are **not altered** (no `.bak` suffix or the like). They are copied with the original filenames and folder structure intact, so restoring is just a matter of copying the file back to its original location.
 
-### 저장 위치 / 구조
+### Storage Location / Structure
 
-외부 저장공간 `/storage/emulated/0/StS2LauncherMM/Saves/` 아래에 **백업 유형별**로 나뉘고, 그 안에 백업 시각(`<ts>` = `yyyyMMdd_HHmmss`) 폴더가, 다시 그 안에 원본 세이브 트리가 그대로 들어갑니다.
+Under external storage `/storage/emulated/0/StS2LauncherMM/Saves/`, it is split **by backup type**, within which there is a backup-time (`<ts>` = `yyyyMMdd_HHmmss`) folder, and within that, the original save tree is placed as-is.
 
 ```
 StS2LauncherMM/Saves/
-  ├── manual/<ts>/<원본 트리>                       (Local Backup 버튼 = 수동)
+  ├── manual/<ts>/<original tree>                   (Local Backup button = manual)
   └── auto/
-      ├── <ts>_match/<원본 트리>                     (핸드셰이크: 로컬=클라우드 일치 시)
+      ├── <ts>_match/<original tree>                 (handshake: when local=cloud match)
       └── <ts>_conflict/
-          ├── kept/<원본 트리>                       (핸드셰이크 충돌: 유지한 쪽)
-          └── discarded/<원본 트리>                  (핸드셰이크 충돌: 버려진 쪽)
+          ├── kept/<original tree>                   (handshake conflict: the kept side)
+          └── discarded/<original tree>              (handshake conflict: the discarded side)
 ```
 
-여기서 `<원본 트리>` 는 게임이 쓰는 실제 경로 그대로입니다:
+Here `<original tree>` is the actual path the game uses, as-is:
 
 ```
-steam/<SteamID>/[modded/]profile<N>/saves/<파일명>
-   예) steam/76561198xxxxxxxxx/profile1/saves/progress.save
-       steam/76561198xxxxxxxxx/modded/profile2/saves/current_run.save
+steam/<SteamID>/[modded/]profile<N>/saves/<filename>
+   e.g.) steam/76561198xxxxxxxxx/profile1/saves/progress.save
+         steam/76561198xxxxxxxxx/modded/profile2/saves/current_run.save
 ```
 
-(`modded/` 단계는 모드를 켜고 플레이한 프로필에만 붙습니다. 빈 세이브는 스냅샷에 포함되지 않습니다.)
+(The `modded/` segment is attached only to profiles played with mods enabled. Empty saves are not included in the snapshot.)
 
-### 보존 정책
+### Retention Policy
 
-- **수동 백업(`manual/`)은 자동으로 지워지지 않습니다.** 의도적으로 만든 백업이므로 직접 정리하기 전까지 남습니다.
-- **자동 백업(`auto/`)은 최신 10세트만 유지**되고, 그보다 오래된 세트는 오래된 것부터 자동 삭제됩니다(`<ts>_match` 1개, `<ts>_conflict` 1개가 각각 1세트).
+- **Manual backups (`manual/`) are not deleted automatically.** They are intentionally created backups, so they remain until you clean them up yourself.
+- **Automatic backups (`auto/`) keep only the latest 10 sets**, and sets older than that are automatically deleted oldest-first (one `<ts>_match` and one `<ts>_conflict` each count as one set).
 
-### 회복 방법
+### How to Recover
 
-1. 외부 파일 매니저(또는 PC 에서 `adb pull`)로 `StS2LauncherMM/Saves/` 아래 원하는 백업 폴더를 엽니다. 폴더명의 시각·유형(`_match`/`_conflict`)으로 어느 시점 것인지 판단합니다.
-2. **게임을 종료한 상태에서**, 백업 안의 파일을 게임의 실제 세이브 위치로 도로 복사합니다. 파일명·폴더 구조가 이미 원본과 같으므로 그대로 덮어쓰면 됩니다.
+1. With an external file manager (or `adb pull` from a PC), open the desired backup folder under `StS2LauncherMM/Saves/`. Judge which point in time it is from by the folder name's timestamp and type (`_match`/`_conflict`).
+2. **With the game closed**, copy the files inside the backup back to the game's actual save location. Since the filenames and folder structure already match the original, you can just overwrite.
 
-> 참고: 외부 → 내부로 **자동 복원해 주는 UI 는 아직 없습니다.** 위처럼 수동 복사로 처리합니다.
+> Note: There is **no UI yet that restores automatically from external to internal.** Handle it with the manual copy described above.
 
 ---
 
-## 12. 모드 설치 (선택)
+## 12. Installing Mods (Optional)
 
-모드를 사용하려면:
+To use mods:
 
-1. **[ZArchiver](https://play.google.com/store/apps/details?id=ru.zdevs.zarchiver)** (Play Store 무료) 를 다운받아 사용을 권장합니다. 삼성 **내 파일** 등 일부 OEM 기본 파일 매니저는 안드로이드 scoped storage 정책 때문에 `/storage/emulated/0/StS2LauncherMM/` 경로가 보이지 않을 수 있습니다 (실제 검증).
-2. ZArchiver 로 `/storage/emulated/0/StS2LauncherMM/Mods/` 경로 진입.
-3. 모드 폴더 (예: `MyMod/`) 통째로 그 안에 복사. 폴더 내부에는 `.dll`, 선택적 `.pck`, `<ModId>.json` 매니페스트가 있어야 함. (PC와 동일, 다르지 않음)
+1. We recommend downloading and using **[ZArchiver](https://play.google.com/store/apps/details?id=ru.zdevs.zarchiver)** (free on the Play Store). Some OEM default file managers, such as Samsung **My Files**, may not show the `/storage/emulated/0/StS2LauncherMM/` path due to Android scoped storage policy (verified in practice).
+2. With ZArchiver, navigate to the `/storage/emulated/0/StS2LauncherMM/Mods/` path.
+3. Copy the entire mod folder (e.g. `MyMod/`) into it. The folder must contain a `.dll`, an optional `.pck`, and a `<ModId>.json` manifest. (Same as PC, no difference.)
 
   <img src="images/19.jpg" width="600">
   <img src="images/20.jpg" width="600">
   <img src="images/21.jpg" width="600">
 
-4. 게임 실행 시 게임 본체의 **"Load mods?"** 다이얼로그가 뜨면 OK 탭. 한 번 선택하면 그 다음부터 자동 로드.
+4. When the game proper shows the **"Load mods?"** dialog at launch, tap OK. Once you choose, it loads automatically from then on.
 
   <img src="images/22.jpg" width="600">
 
 ---
 
-## 13. 런처 자동 업데이트 (CHECK LAUNCHER UPDATE)
+## 13. Launcher Auto-Update (CHECK LAUNCHER UPDATE)
 
-런처 APK 자체 업데이트를 인앱에서 처리할 수 있습니다 (0.3.4 부터). 기존엔 런처 새 버전이 나와도 결과가 콘솔 로그 한 줄로 묻혔지만 이제 다이얼로그로 명시적으로 알려주고, OK 한 번이면 다운로드 / 설치 / 자동 재시작까지 진행됩니다.
+You can handle the launcher APK's own update in-app (from 0.3.4). Previously, even when a new launcher version was released, the result was buried in a single console log line, but now it notifies you explicitly with a dialog, and a single OK takes you through download / install / automatic restart.
 
-### 자동 체크 (부팅 시 1회)
+### Automatic Check (Once at Boot)
 
-런처 부팅 후 launch stage 진입 시 자동으로 GitHub `releases/latest` 와 비교합니다. 신버전이 있으면 다이얼로그가 즉시 뜸. 이미 최신이면 조용히 통과 (알림 없음).
+After the launcher boots, when it enters the launch stage, it automatically compares against GitHub `releases/latest`. If there is a new version, the dialog appears immediately. If already up to date, it passes silently (no notification).
 
   <img src="images/24.jpg" width="600">
   <img src="images/25.jpg" width="600">
 
-### CHECK LAUNCHER UPDATE 버튼 (수동)
+### CHECK LAUNCHER UPDATE Button (Manual)
 
-PLAY 버튼 위에 위치한 **CHECK LAUNCHER UPDATE** 버튼으로 언제든 수동 체크 가능. 결과별 동작:
+You can check manually at any time with the **CHECK LAUNCHER UPDATE** button located above the PLAY button. Behavior by result:
 
-| 결과 | 동작 |
+| Result | Behavior |
 |---|---|
-| **신버전 있음** | "Launcher v0.X.Y is available. Download and install now?" 다이얼로그 → OK 시 다운로드 → 설치 |
-| **이미 최신** | "You're already on the latest launcher version. Open the GitHub releases page anyway?" 다이얼로그 (확인용) |
-| **체크 실패** (네트워크 등) | "Failed to check for launcher updates" 다이얼로그 + 에러 메시지 |
+| **New version available** | "Launcher v0.X.Y is available. Download and install now?" dialog → on OK, download → install |
+| **Already latest** | "You're already on the latest launcher version. Open the GitHub releases page anyway?" dialog (for confirmation) |
+| **Check failed** (network, etc.) | "Failed to check for launcher updates" dialog + error message |
 
   <img src="images/26.jpg" width="600">
 
-### 첫 사용 시 권한 흐름
+### Permission Flow on First Use
 
-처음 다운로드 시도 시 Android 가 **이 출처의 앱 설치 허용** (REQUEST_INSTALL_PACKAGES) 토글을 요구합니다 (Android 8+):
+On the first download attempt, Android requires the **Allow app installs from this source** (REQUEST_INSTALL_PACKAGES) toggle (Android 8+):
 
-1. 런처 다이얼로그 OK → 시스템 설정 화면으로 자동 점프.
-2. 시스템 설정에서 **이 출처 허용** 토글 ON → 뒤로가기.
-3. 런처로 복귀 → CHECK LAUNCHER UPDATE 다시 탭 → 이번엔 다운로드 진행률 다이얼로그.
-4. 다운로드 완료 → Android 시스템 설치 화면 자동 launch → **업데이트** → 앱 자동 재시작.
+1. Launcher dialog OK → automatically jumps to the system settings screen.
+2. Turn the **Allow from this source** toggle ON in system settings → press back.
+3. Return to the launcher → tap CHECK LAUNCHER UPDATE again → this time, the download progress dialog.
+4. Download completes → Android system install screen launches automatically → **Update** → the app restarts automatically.
 
-> 같은 keystore 로 서명되어 saves / Steam 로그인 / 게임 페이로드 (~3GB) 모두 보존됩니다.
+> Signed with the same keystore, so saves / Steam login / game payload (~3GB) are all preserved.
 >
-> APK 가 attach 되지 않은 release 의 경우 자동으로 GitHub releases 페이지를 브라우저에서 여는 폴백.
+> For releases with no APK attached, there is a fallback that automatically opens the GitHub releases page in the browser.
 
 ---
 
-## 14. 디버그 로그 (Debug 토글)
+## 14. Debug Logs (Debug Toggle)
 
-런처에 문제가 발생했을 때 분석에 필요한 logcat 출력을 외부 저장공간에 자동 캡처합니다 (0.3.6 부터). 콘솔 옆 **Debug: ON / OFF** 토글로 제어.
+When a problem occurs in the launcher, the logcat output needed for analysis is automatically captured to external storage (from 0.3.6). Controlled by the **Debug: ON / OFF** toggle next to the console.
 
   <img src="images/27.jpg" width="600">
 
-### 동작 방식
+### How It Works
 
-- **기본값 ON** — 첫 부팅부터 켜져 있어, 런처가 켜자마자 멎는 케이스도 자동으로 로그가 남음.
-- 자기 PID 의 logcat 만 캡처 (`logcat --pid <self>`) — 추가 권한 불필요.
-- **부팅 시 자동 시작** — `onCreate` 단계부터 캡처되므로 .NET / FMOD / BCL 부팅 로그까지 전부 포함.
-- 라인마다 즉시 flush — 강제종료 / 크래시 후에도 로그 보존.
-- 저장 공간이 무한 누적되지 않도록 **최대 20 개** 유지, 가장 오래된 것부터 자동 삭제.
+- **Default ON** — On since the first boot, so even cases where the launcher freezes right after starting are automatically logged.
+- Captures only its own PID's logcat (`logcat --pid <self>`) — no extra permissions needed.
+- **Auto-start at boot** — Captured from the `onCreate` stage, so it includes everything down to the .NET / FMOD / BCL boot logs.
+- Flushes immediately per line — logs are preserved even after a force-kill / crash.
+- To keep storage from accumulating indefinitely, **keeps at most 20**, automatically deleting the oldest first.
 
-### 저장 위치
+### Storage Location
 
 ```
 /storage/emulated/0/StS2LauncherMM/Logs/
-  ├── launcher_<YYYYMMDD>_<HHMMSS>.log  (매 launch 마다 새 파일)
+  ├── launcher_<YYYYMMDD>_<HHMMSS>.log  (a new file for each launch)
   └── ...
 ```
 
   <img src="images/28.jpg" width="600">
 
-### 사용 흐름
+### Usage Flow
 
-문제 보고 시:
-1. 외부 파일 매니저 (ZArchiver 권장) 로 위 경로 진입.
-2. **launcher_*.log** 중 문제가 발생한 시점의 파일 (보통 가장 최근 것) 을 찾아 PC 로 옮기거나 메신저 등으로 첨부.
-3. 이슈 트래커에 첨부해 주세요 → [iunius612/StS2-Launcher_Mod_Manager/issues](https://github.com/iunius612/StS2-Launcher_Mod_Manager/issues)
+When reporting a problem:
+1. Navigate to the path above with an external file manager (ZArchiver recommended).
+2. Among the **launcher_*.log** files, find the one from when the problem occurred (usually the most recent) and move it to a PC or attach it via messenger, etc.
+3. Please attach it to the issue tracker → [iunius612/StS2-Launcher_Mod_Manager/issues](https://github.com/iunius612/StS2-Launcher_Mod_Manager/issues)
 
-### Debug 토글 OFF
+### Debug Toggle OFF
 
-저장 공간 / 사생활 우려로 캡처를 원치 않으면 토글 OFF. 토글 OFF 후에도 SharedPreferences 에 저장되어 다음 launch 부터 적용됩니다 (현재 진행 중인 캡처는 즉시 중단). 다시 ON 하면 그 시점부터 새 파일에 캡처 시작 (이미 부팅된 상태이므로 부팅 직후 로그는 빠짐 — 전체 launch 로그 원하면 토글 ON 후 앱 재시작).
+If you don't want capture due to storage / privacy concerns, turn the toggle OFF. Even after turning it OFF, it is saved to SharedPreferences and applies from the next launch (any capture currently in progress stops immediately). Turning it ON again starts capturing to a new file from that point (since the app is already booted, the logs right after boot are missed — if you want the full launch log, turn the toggle ON then restart the app).
 
 ---
 
-## 15. 자주 묻는 질문 (FAQ)
+## 15. Frequently Asked Questions (FAQ)
 
-### Q. PC 와 모바일 브랜치가 달라도 sync 가 되나요?
+### Q. Does sync work even if the PC and mobile branches differ?
 
-경우에 따라 다릅니다.
+It depends.
 
-- **세이브 스키마가 같은 두 브랜치** (예: 둘 다 minor 업데이트 차이) 라면 그대로 cloud sync 가 작동합니다.
-- **스키마 변경이 있는 브랜치 차이** (예: PC 가 public, 모바일이 public-beta — beta 가 새 필드를 추가했다면) Steam Cloud 가 "sync 충돌" 다이얼로그를 띄우며 복구가 어려워질 수 있습니다.
+- **Two branches with the same save schema** (e.g. both differing by a minor update) will keep cloud-syncing as-is.
+- **A branch difference with a schema change** (e.g. PC on public, mobile on public-beta — if beta added a new field), Steam Cloud will throw a "sync conflict" dialog, and recovery can become difficult.
 
-**가장 안전한 cross-device 전환 절차** (검증 1회):
-1. PC Steam → StS2 properties → 베타 탭에서 **모바일과 같은 브랜치** 선택.
-2. PC StS2 한 번 실행 → 메인 메뉴 도달까지 본 후 종료. 이 과정에서 PC 의 saves 가 새 브랜치 스키마로 cloud 에 push 됨.
-3. 모바일 런처에서 PLAY → Save Manager 다이얼로그가 cloud 의 새 데이터를 정확히 인식하면 그 후 KeepCloud 또는 자동 흐름으로 받기.
+**The safest cross-device transition procedure** (verified once):
+1. PC Steam → StS2 properties → in the Betas tab, select **the same branch as mobile**.
+2. Run PC StS2 once → close it after reaching the main menu. During this process, the PC's saves are pushed to the cloud under the new branch schema.
+3. PLAY on the mobile launcher → once the Save Manager dialog correctly recognizes the new cloud data, fetch it via KeepCloud or the automatic flow.
 
-이 절차가 **항상 필요한 건 아닙니다** — 브랜치 차이가 사소하면 그냥 sync 됨. 다만 충돌이 발생했을 때 복구의 정석적 경로입니다.
+This procedure is **not always necessary** — if the branch difference is trivial, it just syncs. But it is the canonical recovery path when a conflict occurs.
 
-### Q. Cloud 에 잘못된 데이터를 push 해버렸어요. 회복할 수 있나요?
+### Q. I pushed wrong data to the cloud. Can I recover?
 
-PC 측이라면 [shrederr/sts2-progress-rebuild](https://github.com/shrederr/sts2-progress-rebuild) 도구가 `.run` 히스토리에서 `progress.save` 를 재구성해 cloud 까지 복구합니다.
+If it's the PC side, the [shrederr/sts2-progress-rebuild](https://github.com/shrederr/sts2-progress-rebuild) tool reconstructs `progress.save` from the `.run` history and recovers all the way to the cloud.
 
-모바일 local 만 잘못됐다면 (cloud 는 멀쩡) Save Manager 의 **클라우드 유지** 로 받으면 회복.
+If only the mobile local is wrong (the cloud is fine), fetch it with the Save Manager's **Keep Cloud** to recover.
 
-Local Backup 스냅샷이 있다면 `/storage/emulated/0/StS2LauncherMM/Saves/{manual,auto}/<ts>/...` 에서 직접 복원 가능. 특히 핸드셰이크 충돌 시 `auto/<ts>_conflict/discarded/` 에 **버려진 쪽 데이터**가 그대로 남아 있어, KeepLocal/KeepCloud 를 잘못 골랐어도 되돌릴 수 있습니다. ([11번](#11-local-backup-세이브-백업) 참조)
+If you have a Local Backup snapshot, you can restore directly from `/storage/emulated/0/StS2LauncherMM/Saves/{manual,auto}/<ts>/...`. In particular, on a handshake conflict, the **discarded-side data** remains intact in `auto/<ts>_conflict/discarded/`, so you can roll back even if you chose KeepLocal/KeepCloud wrongly. (See [Section 11](#11-local-backup-save-backup))
   <img src="images/23.jpg" width="600">
 
-### Q. Save Manager 가 매번 "충돌" 이라고 떠요.
+### Q. The Save Manager says "conflict" every time.
 
-PC 와 모바일이 progress.save 를 자체적으로 미세하게 다르게 정규화하는 케이스가 있습니다 — 통계는 동일한데 사이즈만 수 KB 차이가 매번 발생. 0.3.2 의 destructive 차단 로직은 이 경우에도 안전하지만, UX 상 다이얼로그는 한 번씩 뜹니다. 별도 추적 중.
+There are cases where the PC and mobile each normalize progress.save slightly differently — the stats are identical but the size differs by a few KB every time. The destructive-blocking logic in 0.3.2 is safe even in this case, but for UX the dialog pops up each time. Being tracked separately.
 
-이때는 **로컬 유지** 또는 **클라우드 유지** 둘 중 시각적으로 더 newer 쪽 (방금 진행한 디바이스) 을 선택하면 됩니다.
+In this case, choose either **Keep Local** or **Keep Cloud**, whichever is visually newer (the device you just played on).
 
-### Q. 게임 종료 후 cloud upload 에 시간이 좀 걸리는 것 같은데요?
+### Q. After quitting the game, the cloud upload seems to take a while?
 
-정상입니다. 0.3.0 이후 메뉴 → Quit 시점에 launcher 가 cloud 큐가 완전히 비워질 때까지 (최대 5분, 보통 1~5초) 기다립니다. 이 동안 process 는 백그라운드에 살아있고 Steam 네트워크 트래픽이 보일 수 있음.
+That's normal. Since 0.3.0, at the menu → Quit point, the launcher waits until the cloud queue is completely empty (up to 5 minutes, usually 1–5 seconds). During this time the process stays alive in the background and Steam network traffic may be visible.
 
-### Q. 폰을 task switcher 에서 swipe 로 강제 종료하면 데이터 손실이 발생하나요?
+### Q. If I force-close the phone by swiping it away in the task switcher, does data loss occur?
 
-0.3.2 이후로는 자동 회복됩니다. swipe 직후 cloud 큐가 다 비워지지 않더라도 다음 부팅 시 `SaveProgressComparer` 가 local newer 쪽을 정확히 감지해서 cloud 로 push.
+Since 0.3.2, it recovers automatically. Even if the cloud queue is not fully emptied right after the swipe, on the next boot `SaveProgressComparer` accurately detects the local-newer side and pushes it to the cloud.
 
-다만 가능하면 **메뉴 → Quit** 으로 정상 종료하는 게 가장 안전합니다.
+That said, quitting normally via **menu → Quit** when possible is the safest.
 
-### Q. 게임 다운로드를 다시 받고 싶어요.
+### Q. I want to download the game again.
 
-CHECK GAME UPDATE 로 다른 브랜치를 선택하면 자동으로 풀 재다운로드 됩니다. 같은 브랜치를 다시 받고 싶으면 일단 다른 브랜치 → 원래 브랜치 순서로 두 번 누르면 됨.
+If you select a different branch with CHECK GAME UPDATE, it automatically does a full re-download. If you want to re-download the same branch, just press it twice in the order: a different branch → then the original branch.
 
 ---
 
-## 16. 알려진 문제 / 미지원 환경
+## 16. Known Issues / Unsupported Environments
 
-| 문제 | 상태 |
+| Issue | Status |
 |---|---|
-| 일부 태블릿 (Lenovo Y700/Y704 등) 에서 런처 진입 실패 | [이슈 #6](https://github.com/iunius612/StS2-Launcher_Mod_Manager/issues/6) — device 로그 수집 중 |
-| PC ↔ 폰 progress.save 사이즈 발산 (매 device 전환 시 conflict 다이얼로그 한 번씩 뜸) | 별도 추적 — destructive 영향은 0.3.2 에서 차단됨 |
+| Launcher entry fails on some tablets (Lenovo Y700/Y704, etc.) | [issue #6](https://github.com/iunius612/StS2-Launcher_Mod_Manager/issues/6) — collecting device logs |
+| PC ↔ phone progress.save size divergence (a conflict dialog appears once on each device switch) | Tracked separately — destructive impact was blocked in 0.3.2 |
 
-새 문제가 발견되면 [이슈 트래커](https://github.com/iunius612/StS2-Launcher_Mod_Manager/issues) 에 등록 부탁드립니다. `adb logcat -d > sts2.log` 로 채취한 로그를 첨부해 주시면 분석에 큰 도움이 됩니다.
+If you find a new problem, please file it on the [issue tracker](https://github.com/iunius612/StS2-Launcher_Mod_Manager/issues). Attaching a log captured with `adb logcat -d > sts2.log` is a great help for analysis.
 
 ---
 
-## 도움이 되는 명령어 (선택)
+## Helpful Commands (Optional)
 
-폰을 PC 에 USB 디버깅으로 연결한 사용자라면:
+If you've connected your phone to a PC via USB debugging:
 
 ```bash
-# 런처 logcat 보기
+# View launcher logcat
 adb logcat -s DOTNET:I STS2Mobile:V godot:V
 
-# 외부 저장 모드/세이브 폴더 보기
+# View external storage mods/saves folders
 adb shell ls -la /storage/emulated/0/StS2LauncherMM/Mods/
 adb shell ls -la /storage/emulated/0/StS2LauncherMM/Saves/
 
-# 강제 초기화 (모든 데이터 삭제 후 새 사용자처럼 시작)
+# Force reset (delete all data and start like a new user)
 adb shell pm clear com.game.sts2launcher.modmanager
 adb shell rm -rf /storage/emulated/0/StS2LauncherMM
 ```
 
 ---
 
-*이 문서는 [iunius612/StS2-Launcher_Mod_Manager](https://github.com/iunius612/StS2-Launcher_Mod_Manager) 의 일부입니다. 잘못된 정보나 추가하고 싶은 항목이 있으면 PR 또는 이슈로 알려주세요.*
+*This document is part of [iunius612/StS2-Launcher_Mod_Manager](https://github.com/iunius612/StS2-Launcher_Mod_Manager). If there is incorrect information or items you'd like to add, please let us know via a PR or issue.*

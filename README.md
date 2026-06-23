@@ -6,7 +6,7 @@ An Android launcher for Slay the Spire 2, built on a custom Godot 4.5.1 engine w
 
 > **Disclaimer**: This is an unofficial community project. Slay the Spire 2 is developed and published by Mega Crit Games. A valid Steam account that owns Slay the Spire 2 is required. Game files are downloaded directly from Steam after authentication. No game assets are included in this repository.
 
-> **사용설명서 (한국어)**: 처음 설치하는 사용자를 위한 단계별 가이드는 [docs/USER_GUIDE.md](docs/USER_GUIDE.md) 참조.
+> **User guide**: For a step-by-step guide for first-time installers, see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
 ## Fork changes (v0.3.11)
 
@@ -89,10 +89,10 @@ Versioned as **0.3.2 (versionCode 233)**. Drop-in upgrade from 0.3.x — saves a
 
 ### What's fixed
 
-1. **Save Manager dialog now surfaces the in-progress run.** The `현재 진행` row replaces the `캐릭터 N명` accumulator and reads as `1막 3층` (or `—` when no run is active). For users hopping between PC and mobile mid-run this is the only signal the dialog gives that one side has progress the other doesn't — pre-fix the dialog showed identical accumulator stats with only mtime/size differing, so users couldn't tell which `Keep` button was the safe choice.
+1. **Save Manager dialog now surfaces the in-progress run.** The `Current run` row replaces the `N characters` accumulator and reads as `Act 1 Floor 3` (or `—` when no run is active). For users hopping between PC and mobile mid-run this is the only signal the dialog gives that one side has progress the other doesn't — pre-fix the dialog showed identical accumulator stats with only mtime/size differing, so users couldn't tell which `Keep` button was the safe choice.
 2. **Conflict detection looks at `current_run.save`, not just `progress.save`.** `CloudSyncDecisions.DetermineAsync` now flags a conflict when current-run files differ even if accumulator files match. Before this, the most common cross-device case (one device has an in-progress run, the other has none/older) silently classified as `Identical` and the user was never prompted to sync.
-3. **Card shows which profile it represents.** A small "프로필 N" subtitle under the card title — the picked summary may now be from profile2 or profile3 rather than always profile1, depending on which profile triggered the conflict. Also `(N개 프로필)` in the body when more than one profile differs.
-4. **`최근` badge uses both progress + current_run mtime.** Pre-fix the badge compared `progress.save` mtime alone, which mispointed at cloud whenever the in-progress run was the newer signal but progress.save hadn't been touched (verified: a strict swipe scenario where local current_run was newer than cloud, but cloud progress.save had a fresher mtime from a prior KeepLocal — old code said cloud, true newer = local).
+3. **Card shows which profile it represents.** A small "Profile N" subtitle under the card title — the picked summary may now be from profile2 or profile3 rather than always profile1, depending on which profile triggered the conflict. Also `(N profiles)` in the body when more than one profile differs.
+4. **`Latest` badge uses both progress + current_run mtime.** Pre-fix the badge compared `progress.save` mtime alone, which mispointed at cloud whenever the in-progress run was the newer signal but progress.save hadn't been touched (verified: a strict swipe scenario where local current_run was newer than cloud, but cloud progress.save had a fresher mtime from a prior KeepLocal — old code said cloud, true newer = local).
 5. **Conflict resolution covers `current_run.save` too, and aligns mtimes.** `ApplyChosenSideAsync` previously processed only `progress.save` and skipped the `SetLastModifiedTime` step. After a `Keep*` press the in-progress run was left out of sync (next AutoSync's "cloud wins" fallback could then overwrite a local newer copy on identical floor counts) and mtimes drifted apart, re-triggering the same conflict on every relaunch. Now it pushes/pulls all of `progress.save / current_run.save / current_run_mp.save × profile 1/2/3 × {vanilla, modded}` and stamps local mtime to match cloud (KeepCloud) or NOW (KeepLocal) so the next decision sees consistent state.
 6. **`SaveProgressComparer.CompareCurrentRun` size tiebreaker.** Floor counts often match on both sides even when the run files differ by hundreds of bytes (post-floor-entry actions update `current_run.save` without touching `map_point_history` length). The old `Equal → cloud wins` fallback then silently destroyed local progress on the next sync. New tiebreaker: same floor → larger file wins. Combined with #5 this auto-recovers the "swipe before queue drained" case without user input.
 7. **PLAY locks while a cloud op is in flight.** `SetSyncBusy` now disables PLAY along with Push/Pull. Pre-fix you could tap Save Manager and then PLAY before the dialog resolved — the cloud handshake would then race the game's startup. (Android lifecycle still doesn't guarantee `Flush(5000)` finishes before swipe kills the process; the size-tiebreaker auto-recovery in #6 is the real safety net for that case.)
@@ -160,7 +160,7 @@ Versioned as **0.2.1 (versionCode 201)**.
 > **Heads up**: the "MOD MANAGER" button on 0.2.x has been repurposed to **"SAVE MANAGER"** in 0.3.0 (it opens the cloud sync dialog). The in-launcher SAF mod-import flow is still WIP, so use the manual file-manager method below until it lands.
 
 1. Grant the launcher "All files access" on first run when it prompts. Once granted, the launcher creates `/storage/emulated/0/StS2LauncherMM/Mods/` on its own.
-2. Install any Android file manager that can browse internal storage — Material Files, Solid Explorer, FE File Explorer, Samsung's built-in **내 파일**, etc.
+2. Install any Android file manager that can browse internal storage — Material Files, Solid Explorer, FE File Explorer, Samsung's built-in **My Files**, etc.
 3. Navigate to `/storage/emulated/0/StS2LauncherMM/Mods/` and drop each mod as its own subfolder. A valid mod folder contains the mod's `.dll`, optional `.pck`, and a `<ModId>.json` manifest at its root — the same layout PC users paste into `Steam\steamapps\common\Slay the Spire 2\mods\`.
 
    ![Mods folder layout](docs/images/mods_folder.jpg)
