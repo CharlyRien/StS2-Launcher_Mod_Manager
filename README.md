@@ -224,29 +224,54 @@ scripts/                   # Build and tooling scripts
 
 ## Prerequisites
 
-- .NET 9 SDK
-- Android SDK + NDK (see `android/config.gradle` for versions)
-- Python 3 (for `make-bootstrap-pck.py` and SCons)
-- Original game files in `upstream/godot-export/`
-- Custom Godot engine build (see `scripts/build-godot.sh`)
-- FMOD SDK in `vendor/fmod-sdk/`
+- **.NET 9 SDK** — `dotnet` on PATH
+- **JDK 17** — `JAVA_HOME` pointing at it (newer JDKs are not supported by the Gradle/AGP version used)
+- **Android SDK** — platform 35, build-tools 35.0.0 (install with `sdkmanager "platforms;android-35" "build-tools;35.0.0"`). An NDK is optional (no native code is compiled; see `android/config.gradle` for the pinned version).
+- **Python 3**, **curl**, **unzip**, **tar** — used by the setup script (`keytool`/`javac` come with the JDK)
+- **Slay the Spire 2 installed** (Steam) — the script reads the game's `sts2.dll` from your own install
+- *(optional)* **FMOD SDK** for working in-game audio — see the FMOD note below
+
+Everything else (the Ekyso base APK, the Godot 4.5.1 mono templates, the .NET BCL, the
+native libraries, the compile references, a dev signing keystore) is fetched or generated
+automatically by `scripts/setup-deps.sh`.
 
 ## Building
 
-**Note: This is a WIP. There are other binaries that are required and will fail if you just run the `./build.sh` script. Godot Engine can be found on their repo https://github.com/godotengine/godot. Harmony can be found here https://github.com/Ekyso/Harmony but the version used in StS2 Launcher is compiled using dotnet 9.0. FMOD can be found here https://www.fmod.com/. Spine can be found here https://esotericsoftware.com/. I plan to upload the custom fork of Godot Engine used and the dotnet 9.0 Harmony soon. However, Spine and FMOD will not be uploaded due to licensing restrictions. Information on licensing can be found in the [THIRD-PARTY-NOTICES.txt](https://github.com/Ekyso/StS2-Launcher/blob/main/THIRD_PARTY_LICENSES.md) of the root folder.** 
-
 ```bash
+# 1. one-time: download/harvest deps, detect your game's sts2.dll, make a dev keystore
+bash scripts/setup-deps.sh
+
+# 2. build the patcher + signed APK (re-run this after code or game changes)
 bash scripts/build.sh
 ```
 
-This runs the full pipeline:
-1. `dotnet publish` the patcher (outputs `STS2Mobile.dll` + SteamKit2 dependencies)
-2. Copies published DLLs to `android/assets/dotnet_bcl/`
-3. Copies `libSystem.Security.Cryptography.Native.Android.so` to JNI libs (for TLS)
-4. Bumps the version in `gradle.properties`
-5. Builds the APK via `./gradlew assembleMonoRelease`
+`setup-deps.sh` auto-downloads the [Ekyso base APK](https://github.com/Ekyso/StS2-Launcher/releases)
+and the [Godot 4.5.1 mono export templates](https://github.com/godotengine/godot-builds/releases/tag/4.5.1-stable)
+(~1.2 GB, one time), auto-detects `sts2.dll` from your local Steam install (override with
+`STS2_GAME_DIR=/path`), harvests the BCL + native libs + Godot engine AAR, and generates a
+local dev keystore. `build.sh` then:
+1. `dotnet publish` the patcher (`STS2Mobile.dll` + SteamKit2 deps)
+2. copies the published DLLs into `android/assets/dotnet_bcl/`
+3. bumps the version in `gradle.properties` (skip with `--no-bump`)
+4. builds the APK via `./gradlew assembleMonoRelease`, signing it with the dev keystore
 
 Output: `android/build/outputs/apk/mono/release/StS2Launcher-v<version>.apk`
+
+> **What about `fmod.jar`?** The FMOD *native* libraries are harvested from the base APK, so
+> you don't need the FMOD SDK for them. The only piece the SDK provides is `fmod.jar` (the
+> `org.fmod.FMOD` Java bindings the launcher calls at startup). If you don't have it,
+> `setup-deps.sh` substitutes a **no-audio stub** so the build still completes — the APK
+> installs and runs, but in-game sound stays silent. For working audio, make a free account at
+> [fmod.com](https://www.fmod.com/), download "FMOD Engine" for Android, and re-run with
+> `FMOD_JAR=/path/to/fmodstudioapi*/api/core/lib/fmod.jar bash scripts/setup-deps.sh`.
+
+> **What about the keystore?** Android refuses to install an unsigned APK, so the APK must be
+> signed with a *keystore* (a self-generated signing certificate). `setup-deps.sh` makes a
+> throwaway dev keystore (`android/sts2.keystore`, gitignored) and `build.sh` signs with it
+> automatically — no action needed for personal sideloading. The password lives in the
+> gitignored `android/keystore.properties` (override the default with
+> `STS2_KEYSTORE_PASSWORD=… bash scripts/setup-deps.sh`). A stable, backed-up keystore only
+> matters if you publish to the Play Store, which this sideload-only project does not.
 
 ### Installing
 

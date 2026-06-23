@@ -5,20 +5,26 @@
     <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>../../upstream/godot-export/.godot/mono/publish/arm64/0Harmony.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
-    <Reference Include="GodotSharp">
-      <HintPath>../../upstream/godot-export/.godot/mono/publish/arm64/GodotSharp.dll</HintPath>
-      <Private>false</Private>
-    </Reference>
+    <!-- Compile-only references. GodotSharp and Harmony are resolved from NuGet
+         (GodotSharp 4.5.1 == the engine version; Lib.Harmony is API-compatible with
+         the bundled Ekyso fork). IncludeAssets=compile keeps them out of the publish
+         output — at runtime the device uses the versions baked into the harvested BCL
+         (assets/dotnet_bcl/), incl. Ekyso's custom 0Harmony.dll. So these no longer
+         need to be harvested into ../../upstream/. -->
+    <PackageReference Include="GodotSharp" Version="4.5.1">
+      <IncludeAssets>compile</IncludeAssets>
+    </PackageReference>
+    <!-- Version matches the runtime 0Harmony shipped in the harvested BCL (Ekyso's
+         fork reports 2.4.2.0, and it is not strong-named, so this is belt-and-suspenders). -->
+    <PackageReference Include="Lib.Harmony" Version="2.4.2">
+      <IncludeAssets>compile</IncludeAssets>
+    </PackageReference>
+    <!-- The game assembly: proprietary, extracted from the user's own Slay the
+         Spire 2 install. scripts/setup-deps.sh auto-detects and places it here. -->
     <Reference Include="sts2">
       <HintPath>../../upstream/godot-export/.godot/mono/publish/arm64/sts2.dll</HintPath>
       <Private>false</Private>
     </Reference>
-  </ItemGroup>
-  <ItemGroup>
     <PackageReference Include="SteamKit2" Version="3.4.0" />
   </ItemGroup>
 </Project>

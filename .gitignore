@@ -22,7 +22,12 @@ src/STS2Mobile/obj/
 *.aar
 *.aar.bak*
 *.jar
+# ...but the Gradle wrapper jar is the standard committed bootstrap that lets
+# ./gradlew self-provision Gradle. Without it a fresh clone can't build at all.
+!android/gradle/wrapper/gradle-wrapper.jar
 *.keystore
+# Auto-generated local signing config (holds the keystore password) — never commit.
+android/keystore.properties
 
 # Third-party sources & SDKs
 vendor/
