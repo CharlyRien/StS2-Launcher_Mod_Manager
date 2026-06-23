@@ -13,12 +13,23 @@ GRADLE_PROPS="$BUILD_DIR/gradle.properties"
 APK_DIR="$BUILD_DIR/build/outputs/apk/mono/release"
 BCL_DIR="$BUILD_DIR/assets/dotnet_bcl"
 
-# 0. Guard: the harvested deps must exist (run setup-deps.sh first). Without them
-# gradle would happily package an APK missing GodotSharp.dll / the engine AAR that
-# then crashes on the device.
-if [ ! -f "$BCL_DIR/GodotSharp.dll" ] || ! ls "$BUILD_DIR"/libs/release/*.aar >/dev/null 2>&1; then
-    echo "ERROR: dependencies not provisioned (missing $BCL_DIR/GodotSharp.dll or libs/release/*.aar)." >&2
-    echo "       Run 'bash scripts/setup-deps.sh' first." >&2
+# 0. Guard: the harvested/generated deps must exist (run setup-deps.sh first).
+# Each of these, if missing, ships a broken APK that fails on the device:
+#   GodotSharp.dll / *.aar  -> engine won't load
+#   bootstrap.pck           -> "Couldn't load project data ... .pck file missing"
+#   libs/release/fmod.jar   -> FMOD native libs crash the launcher on launch
+for need in \
+    "$BCL_DIR/GodotSharp.dll" \
+    "$BUILD_DIR/assets/bootstrap.pck" \
+    "$BUILD_DIR/libs/release/fmod.jar"; do
+    if [ ! -f "$need" ]; then
+        echo "ERROR: dependency not provisioned: $need" >&2
+        echo "       Run 'bash scripts/setup-deps.sh' first." >&2
+        exit 1
+    fi
+done
+if ! ls "$BUILD_DIR"/libs/release/*.aar >/dev/null 2>&1; then
+    echo "ERROR: Godot engine AAR missing in libs/release/. Run 'bash scripts/setup-deps.sh' first." >&2
     exit 1
 fi
 

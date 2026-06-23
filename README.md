@@ -228,12 +228,12 @@ scripts/                   # Build and tooling scripts
 - **JDK 17** — `JAVA_HOME` pointing at it (newer JDKs are not supported by the Gradle/AGP version used)
 - **Android SDK** — platform 35, build-tools 35.0.0 (install with `sdkmanager "platforms;android-35" "build-tools;35.0.0"`). An NDK is optional (no native code is compiled; see `android/config.gradle` for the pinned version).
 - **Python 3**, **curl**, **unzip**, **tar** — used by the setup script (`keytool`/`javac` come with the JDK)
+- **dex2jar** (`brew install dex2jar`) — used to extract the FMOD Java bindings from the base APK (so no FMOD account is needed; see the FMOD note)
 - **Slay the Spire 2 installed** (Steam) — the script reads the game's `sts2.dll` from your own install
-- *(optional)* **FMOD SDK** for working in-game audio — see the FMOD note below
 
 Everything else (the Ekyso base APK, the Godot 4.5.1 mono templates, the .NET BCL, the
-native libraries, the compile references, a dev signing keystore) is fetched or generated
-automatically by `scripts/setup-deps.sh`.
+native libraries, the FMOD bindings, the `bootstrap.pck`, the compile references, and a dev
+signing keystore) is fetched or generated automatically by `scripts/setup-deps.sh`.
 
 ## Building
 
@@ -248,8 +248,8 @@ bash scripts/build.sh
 `setup-deps.sh` auto-downloads the [Ekyso base APK](https://github.com/Ekyso/StS2-Launcher/releases)
 and the [Godot 4.5.1 mono export templates](https://github.com/godotengine/godot-builds/releases/tag/4.5.1-stable)
 (~1.2 GB, one time), auto-detects `sts2.dll` from your local Steam install (override with
-`STS2_GAME_DIR=/path`), harvests the BCL + native libs + Godot engine AAR, and generates a
-local dev keystore. `build.sh` then:
+`STS2_GAME_DIR=/path`), harvests the BCL + native libs + Godot engine AAR, generates the
+`bootstrap.pck`, extracts the FMOD bindings, and creates a local dev keystore. `build.sh` then:
 1. `dotnet publish` the patcher (`STS2Mobile.dll` + SteamKit2 deps)
 2. copies the published DLLs into `android/assets/dotnet_bcl/`
 3. bumps the version in `gradle.properties` (skip with `--no-bump`)
@@ -257,13 +257,13 @@ local dev keystore. `build.sh` then:
 
 Output: `android/build/outputs/apk/mono/release/StS2Launcher-v<version>.apk`
 
-> **What about `fmod.jar`?** The FMOD *native* libraries are harvested from the base APK, so
-> you don't need the FMOD SDK for them. The only piece the SDK provides is `fmod.jar` (the
-> `org.fmod.FMOD` Java bindings the launcher calls at startup). If you don't have it,
-> `setup-deps.sh` substitutes a **no-audio stub** so the build still completes — the APK
-> installs and runs, but in-game sound stays silent. For working audio, make a free account at
-> [fmod.com](https://www.fmod.com/), download "FMOD Engine" for Android, and re-run with
-> `FMOD_JAR=/path/to/fmodstudioapi*/api/core/lib/fmod.jar bash scripts/setup-deps.sh`.
+> **What about `fmod.jar`?** The FMOD *native* libraries are harvested from the base APK. The
+> `org.fmod` **Java bindings** are needed too (the launcher loads them at startup), and a partial
+> stub *crashes the launcher* — so by default `setup-deps.sh` extracts the **real** bindings from
+> the base APK using `dex2jar` (`brew install dex2jar`); no FMOD account required. If you'd rather
+> use the official SDK, point it at the jar: `FMOD_JAR=/path/to/fmodstudioapi*/api/core/lib/fmod.jar
+> bash scripts/setup-deps.sh`. (`FMOD_ALLOW_STUB=1` forces the crash-prone stub for a compile-only
+> test — not a usable APK.)
 
 > **What about the keystore?** Android refuses to install an unsigned APK, so the APK must be
 > signed with a *keystore* (a self-generated signing certificate). `setup-deps.sh` makes a

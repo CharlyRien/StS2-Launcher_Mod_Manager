@@ -154,23 +154,31 @@ patch_aar "$LIBS_RELEASE/godot-lib.template_release.aar" "$EKYSO_GODOT_SO"
 [ -f "$LIBS_DEBUG/godot-lib.template_debug.aar" ] && patch_aar "$LIBS_DEBUG/godot-lib.template_debug.aar" "$EKYSO_GODOT_SO"
 log "AAR patched."
 
-# ---- 9. FMOD fmod.jar (the one gated dependency) ----------------------------
-# The FMOD *native* libs (.so) already came from the Ekyso APK in step 6. Only the
-# org.fmod.FMOD Java bindings (fmod.jar) are needed, and only at compile time. The
-# FMOD SDK is gated behind a free account, so we locate a real jar if you have one,
-# otherwise fall back to a no-audio compile stub (override with FMOD_REQUIRE_REAL=1).
+# ---- 9. bootstrap.pck (minimal Godot project so the engine can initialize) --
+# Gitignored (*.pck) and required at runtime — without it the Godot engine aborts
+# with "Couldn't load project data ... Is the .pck file missing?". Regenerated
+# deterministically from project.godot by the bundled pure-Python script.
+log "Generating bootstrap.pck..."
+"$PYTHON" "$ROOT/scripts/make-bootstrap-pck.py" >/dev/null \
+    && log "  bootstrap.pck -> android/assets/" \
+    || fail "make-bootstrap-pck.py failed"
+
+# ---- 10. FMOD fmod.jar (org.fmod Java bindings) -----------------------------
+# The FMOD *native* libs (.so) already came from the base APK in step 6. The
+# org.fmod Java bindings (fmod.jar) are needed at compile time AND are loaded by
+# the native libs at startup — a partial stub CRASHES the launcher on launch.
+# Resolution order: a real SDK jar you point at; else extract the REAL bindings
+# from the base APK (no FMOD account needed); else (opt-in) a crash-prone stub.
 log "Resolving fmod.jar..."
 FMOD_JAR_FOUND=""
 fmod_candidates=()
 [ -n "${FMOD_JAR:-}" ] && fmod_candidates+=("$FMOD_JAR")
-# legacy req_files tarball
 for tgz in "$DEPS_DIR"/fmodstudioapi*android.tar.gz; do
     [ -f "$tgz" ] || continue
     tar -xzf "$tgz" -C "$WORK" 2>/dev/null || true
     found="$(find "$WORK" -name fmod.jar -path '*api/core/lib/*' 2>/dev/null | head -1)"
     [ -n "$found" ] && fmod_candidates+=("$found")
 done
-# extracted SDK in common download spots
 while IFS= read -r f; do fmod_candidates+=("$f"); done < <(
     find "$HOME/Downloads" "$DEPS_DIR" -maxdepth 5 -name fmod.jar -path '*api/core/lib/*' 2>/dev/null | head -4
 )
@@ -178,38 +186,57 @@ for cand in "${fmod_candidates[@]:-}"; do
     [ -n "$cand" ] && [ -f "$cand" ] && { FMOD_JAR_FOUND="$cand"; break; }
 done
 
+place_fmod() { cp -f "$1" "$LIBS_RELEASE/fmod.jar"; cp -f "$1" "$LIBS_DEBUG/fmod.jar"; }
+
 if [ -n "$FMOD_JAR_FOUND" ]; then
     log "Using real fmod.jar: $FMOD_JAR_FOUND"
-    cp -f "$FMOD_JAR_FOUND" "$LIBS_RELEASE/fmod.jar"
-    cp -f "$FMOD_JAR_FOUND" "$LIBS_DEBUG/fmod.jar"
+    place_fmod "$FMOD_JAR_FOUND"
 else
-    if [ "${FMOD_REQUIRE_REAL:-0}" = "1" ]; then
-        fail "fmod.jar not found and FMOD_REQUIRE_REAL=1. Download the FMOD SDK (free account at fmod.com) and set FMOD_JAR=/path/to/api/core/lib/fmod.jar"
+    # Extract the real org.fmod bindings from the base APK (it's a working launcher).
+    D2J="$(command -v d2j-dex2jar || command -v dex2jar || true)"
+    if [ -n "$D2J" ]; then
+        log "Extracting real FMOD bindings from the base APK (via dex2jar)..."
+        rm -rf "$WORK/fmodx"; mkdir -p "$WORK/fmodx"
+        # NB: verify with a file test, not `unzip -l | grep -q` — under `set -o pipefail`
+        # grep -q closes the pipe early and unzip's SIGPIPE (141) fails the whole chain.
+        if "$D2J" "$EKYSO_APK" -o "$WORK/fmodx/all.jar" -f >/dev/null 2>&1 \
+           && ( cd "$WORK/fmodx" && unzip -oq all.jar "org/fmod/*" && jar cf fmod.jar org ) \
+           && [ -f "$WORK/fmodx/org/fmod/FMOD.class" ]; then
+            place_fmod "$WORK/fmodx/fmod.jar"
+            FMOD_JAR_FOUND="base-apk"
+            log "  real FMOD bindings extracted ($(find "$WORK/fmodx/org/fmod" -name '*.class' | wc -l | tr -d ' ') classes)."
+        else
+            warn "dex2jar extraction failed."
+        fi
     fi
-    warn "No real fmod.jar found — generating a NO-AUDIO compile stub so the build can complete."
-    warn "  The resulting APK installs and runs, but in-game audio will be silent/unstable"
-    warn "  (the stub's FMOD.init is a no-op). This is fine for testing; NOT a real release."
-    warn "  To get working audio, supply the real fmod.jar:"
-    warn "    1) create a free account at https://www.fmod.com and download 'FMOD Engine' for Android"
-    warn "    2) re-run with FMOD_JAR=/path/to/fmodstudioapi*/api/core/lib/fmod.jar  (or drop it in $DEPS_DIR)"
-    [ -n "$JAVAC" ] || fail "No real fmod.jar and no javac to build the stub. Install a JDK or supply fmod.jar."
+fi
+
+if [ -z "$FMOD_JAR_FOUND" ]; then
+    if [ "${FMOD_ALLOW_STUB:-0}" != "1" ]; then
+        fail "No FMOD bindings available. The native FMOD libs need the real org.fmod classes;
+       a stub CRASHES the launcher at startup. Fix one of:
+         - install dex2jar so they can be extracted from the base APK:  brew install dex2jar
+         - or download the FMOD SDK (free account, fmod.com) and:  FMOD_JAR=/path/to/api/core/lib/fmod.jar
+       (FMOD_ALLOW_STUB=1 forces a stub for a compile-only test — the resulting APK will crash on a device.)"
+    fi
+    warn "FMOD_ALLOW_STUB=1 — generating a stub. The APK will CRASH on launch (native FMOD"
+    warn "  calls into org.fmod methods the stub lacks). Compile-only test, not a usable build."
+    [ -n "$JAVAC" ] || fail "No javac to build the stub. Install a JDK or supply fmod.jar."
     ANDROID_JAR_FOR_STUB="$(find "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}/platforms" -name android.jar 2>/dev/null | sort -V | tail -1)"
     [ -n "$ANDROID_JAR_FOR_STUB" ] || fail "android.jar not found to compile the FMOD stub (install an Android platform)."
     STUB="$WORK/fmodstub"; mkdir -p "$STUB/org/fmod"
     cat > "$STUB/org/fmod/FMOD.java" <<'JAVA'
 package org.fmod;
 import android.content.Context;
-/* COMPILE-ONLY STUB — not the real FMOD SDK. Satisfies GodotApp.java's
-   org.fmod.FMOD references so the APK builds; audio is non-functional. */
+/* COMPILE-ONLY STUB — not the real FMOD SDK and NOT runtime-safe (crashes). */
 public class FMOD {
     public static boolean init(Context c) { return true; }
     public static void close() {}
 }
 JAVA
     ( cd "$STUB" && "$JAVAC" -cp "$ANDROID_JAR_FOR_STUB" org/fmod/FMOD.java && jar cf fmod.jar org/fmod/FMOD.class )
-    cp -f "$STUB/fmod.jar" "$LIBS_RELEASE/fmod.jar"
-    cp -f "$STUB/fmod.jar" "$LIBS_DEBUG/fmod.jar"
-    log "FMOD stub placed (no audio)."
+    place_fmod "$STUB/fmod.jar"
+    log "FMOD stub placed (crashes at runtime)."
 fi
 
 # Crypto JAR: build.gradle references it for the Mono TLS native lib.
