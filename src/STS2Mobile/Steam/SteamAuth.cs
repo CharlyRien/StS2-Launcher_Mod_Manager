@@ -29,6 +29,11 @@ public class SteamAuth : IDisposable
     // Set when the WebSocket drops during 2FA wait (e.g. user backgrounds app).
     internal volatile bool NeedsReconnectForAuth;
 
+    // Set once the device (mobile app) confirmation flow is entered. That flow
+    // has no code submission to hang the reconnect off of, so a drop during the
+    // poll wait must be recovered transparently inside the poll loop instead.
+    internal volatile bool UsedDeviceConfirmation;
+
     public event Action<string> LogMessage;
 
     public SteamAuth()
@@ -101,7 +106,7 @@ public class SteamAuth : IDisposable
             }
         );
 
-        var pollResponse = await authSession.PollingWaitForResultAsync();
+        var pollResponse = await PollUntilResultAsync(authSession);
 
         string newGuardData = pollResponse.NewGuardData ?? guardData;
 
@@ -110,9 +115,56 @@ public class SteamAuth : IDisposable
         return new AuthResult(pollResponse.AccountName, pollResponse.RefreshToken, newGuardData);
     }
 
+    // Drives SteamKit2's poll loop, but survives the WebSocket drop that is
+    // effectively guaranteed during mobile-app (device) confirmation: approving
+    // the request means switching to the Steam app, which backgrounds the
+    // launcher and kills its (still unauthenticated, heartbeat-less) CM
+    // connection. SteamKit2 then fails the in-flight PollAuthSessionStatus job
+    // with AsyncJobFailedException and PollingWaitForResultAsync propagates it.
+    //
+    // Unlike the code-entry flow, device confirmation never invokes CodeProvider,
+    // so there is no point to hang a reconnect off of. Instead we reconnect here
+    // and resume polling the SAME auth session — its ClientID/RequestID stay valid
+    // server-side, and PollAuthSessionStatusAsync rebuilds its request from them on
+    // every call, so re-entering PollingWaitForResultAsync simply continues the
+    // pending login until the user's approval is detected.
+    private async Task<AuthPollResult> PollUntilResultAsync(AuthSession authSession)
+    {
+        const int maxReconnects = 12;
+        int reconnects = 0;
+
+        while (true)
+        {
+            try
+            {
+                return await authSession.PollingWaitForResultAsync();
+            }
+            catch (Exception ex)
+                when (UsedDeviceConfirmation
+                    && (ex is AsyncJobFailedException || NeedsReconnectForAuth))
+            {
+                if (++reconnects > maxReconnects)
+                {
+                    Log(
+                        $"Gave up resuming mobile confirmation after {maxReconnects} reconnect attempts"
+                    );
+                    throw;
+                }
+
+                Log(
+                    "Connection dropped while waiting for mobile confirmation — reconnecting and resuming..."
+                );
+                PatchHelper.Log(
+                    $"[Auth] Resuming poll after disconnect ({ex.GetType().Name}), attempt {reconnects}"
+                );
+                await ReconnectForAuthAsync();
+            }
+        }
+    }
+
     internal async Task ReconnectForAuthAsync()
     {
-        Log("Reconnecting for auth code submission...");
+        Log("Reconnecting to Steam...");
         NeedsReconnectForAuth = false;
         _connectedGate.Reset();
         _client.Connect();
@@ -196,6 +248,7 @@ public class SteamAuth : IDisposable
 
         public Task<bool> AcceptDeviceConfirmationAsync()
         {
+            _auth.UsedDeviceConfirmation = true;
             _auth.Log("Waiting for Steam mobile app confirmation...");
             return Task.FromResult(true);
         }
